@@ -1,0 +1,21 @@
+[package]
+name = "typst_font_manager"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+typst = { git = "https://github.com/typst/typst", branch = "main" }
+fontdb = "0.21.0"
+walkdir = "2.5.0"
+serde = { version = "1.0.209", features = ["derive"] }
+toml = "0.8.19"
+clap = { version = "4.5.17", features = ["derive"] }
+anyhow = "1.0.87"
+colored = "2.1.0"
+
+[[bin]]
+name = "typfont" # Specify the desired binary name here
+path = "src/main.rs"
+
+
+

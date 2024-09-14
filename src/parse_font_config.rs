@@ -1,22 +1,33 @@
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::fmt;
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Read;
-use std::error::Error;
 use std::path::Path;
-use serde::ser::SerializeStruct;
-use toml::{Value, map::Map};
+
+use toml::{Value};
 use typst::text::{FontStretch, FontStyle, FontWeight};
 use anyhow::Result;
 
-#[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize)]
 pub struct TypstFont {
-    family_name: String,
+    pub(crate) family_name: String,
     #[serde(default, with = "typst_font_serde")]
-    style: FontStyle,
+    pub(crate) style: FontStyle,
     #[serde(default)]
-    weight: FontWeight,
+    pub(crate) weight: FontWeight,
     #[serde(default)]
-    stretch: FontStretch,
+    pub(crate) stretch: FontStretch,
+}
+
+impl fmt::Display for TypstFont {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let stretch = (self.stretch.to_ratio().get()* 1000.0) as u16;
+        write!(
+            f,
+            "{:<30}    (style: {:?}, weight: {:?}, stretch: {})",
+            self.family_name, self.style, self.weight, stretch
+        )
+    }
 }
 
 mod typst_font_serde {
@@ -55,17 +66,13 @@ mod typst_font_serde {
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct FontConfig {
     #[serde(default)]
-    font_dir: Option<String>,
-    fonts: Vec<TypstFont>,
+    pub(crate) font_dir: Option<String>,
+    pub(crate) fonts: Vec<TypstFont>,
 }
 
 
 /// Function to deserialize TOML string into a Vec of TypstFont
 pub fn deserialize_fonts_from_toml(toml_content: &str) -> Result<FontConfig> {
-    // print preprocess_font_config(toml_content) to debug
-
-    let res = preprocess_font_config(toml_content)?;
-
     let font_config: FontConfig = toml::from_str(preprocess_font_config(toml_content)?.as_str())?;
     Ok(font_config)
 }
@@ -82,53 +89,6 @@ pub fn serialize_fonts_to_toml(font_config: FontConfig) -> Result<String> {
     let toml_string = toml::to_string(&font_config)?;
     Ok(toml_string)
 }
-// fn preprocess_font_config(toml_str: &str) -> Result<String> {
-//     // Parse the TOML string into a Value
-//     let toml_value: Value = toml_str.parse::<Value>()?;
-//
-//     // Process the TOML data
-//     if let Some(fonts) = toml_value.get("fonts") {
-//         if let Some(fonts_array) = fonts.as_array() {
-//             let mut expanded_fonts = Vec::new();
-//
-//             // Iterate over each font entry
-//             for font in fonts_array {
-//                 // Check if weight exists
-//                 if let Some(weight) = font.get("weight") {
-//                     // If weight is an array, expand it
-//                     if let Some(weights) = weight.as_array() {
-//                         for w in weights {
-//                             let mut new_font = font.clone();
-//                             if let Some(map) = new_font.as_table_mut() {
-//                                 map.insert("weight".to_string(), w.clone());
-//                             }
-//                             expanded_fonts.push(Value::Table(new_font.as_table().unwrap().clone()));
-//                         }
-//                     } else {
-//                         expanded_fonts.push(font.clone());
-//                     }
-//                 } else {
-//                     // If no weight field, just push the original font entry
-//                     expanded_fonts.push(font.clone());
-//                 }
-//             }
-//
-//             // Create a new TOML map with the expanded fonts
-//             let mut new_toml = Map::new();
-//             new_toml.insert("fonts".to_string(), Value::Array(expanded_fonts));
-//
-//             // Convert back to TOML string
-//             let new_toml_string = toml::to_string(&Value::Table(new_toml))?;
-//
-//             // Return the updated TOML as a string
-//             return Ok(new_toml_string);
-//         }
-//     }
-//
-//     // If no "fonts" array found, return the original TOML
-//     Ok(toml_str.to_string())
-// }
-
 
 fn preprocess_font_config(toml_str: &str) -> Result<String> {
     // Parse the TOML string into a Value
@@ -174,7 +134,6 @@ fn preprocess_font_config(toml_str: &str) -> Result<String> {
     // Return the updated TOML as a string
     Ok(new_toml_string)
 }
-
 
 
 // add test
