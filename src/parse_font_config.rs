@@ -1,12 +1,12 @@
-use std::fmt;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
-use toml::{Value};
-use typst::text::{FontStretch, FontStyle, FontWeight};
 use anyhow::Result;
+use toml::Value;
+use typst::text::{FontStretch, FontStyle, FontWeight};
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize)]
 pub struct TypstFont {
@@ -21,7 +21,7 @@ pub struct TypstFont {
 
 impl fmt::Display for TypstFont {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let stretch = (self.stretch.to_ratio().get()* 1000.0) as u16;
+        let stretch = (self.stretch.to_ratio().get() * 1000.0) as u16;
         write!(
             f,
             "{:<30}    (style: {:?}, weight: {:?}, stretch: {})",
@@ -31,8 +31,8 @@ impl fmt::Display for TypstFont {
 }
 
 mod typst_font_serde {
-    use typst::text::FontStyle;
     use serde::{Deserialize, Deserializer, Serializer};
+    use typst::text::FontStyle;
 
     //Custom serializer for FontStyle
     pub fn serialize<S>(style: &FontStyle, serializer: S) -> Result<S::Ok, S::Error>
@@ -47,7 +47,6 @@ mod typst_font_serde {
         serializer.serialize_str(style_str)
     }
 
-
     //Custom deserializer for FontStyle
     pub fn deserialize<'de, D>(deserializer: D) -> Result<FontStyle, D::Error>
     where
@@ -58,18 +57,21 @@ mod typst_font_serde {
             "normal" => Ok(FontStyle::Normal),
             "italic" => Ok(FontStyle::Italic),
             "oblique" => Ok(FontStyle::Oblique),
-            _ => Err(serde::de::Error::custom(format!("Invalid FontStyle: {}", s))),
+            _ => Err(serde::de::Error::custom(format!(
+                "Invalid FontStyle: {}",
+                s
+            ))),
         }
     }
 }
 
+// This struct represents the font configuration of a project, i.e. font_config.toml
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct FontConfig {
     #[serde(default)]
-    pub(crate) font_dir: Option<String>,
-    pub(crate) fonts: Vec<TypstFont>,
+    pub(crate) font_dir: Option<String>, // Path to the font directory of the project
+    pub(crate) fonts: Vec<TypstFont>, // List of fonts required by the project
 }
-
 
 /// Function to deserialize TOML string into a Vec of TypstFont
 pub fn deserialize_fonts_from_toml(toml_content: &str) -> Result<FontConfig> {
@@ -90,12 +92,14 @@ pub fn serialize_fonts_to_toml(font_config: FontConfig) -> Result<String> {
     Ok(toml_string)
 }
 
+// Function to preprocess the font configuration TOML string,
+// expanding the "weight" field if it is an array
 fn preprocess_font_config(toml_str: &str) -> Result<String> {
     // Parse the TOML string into a Value
     let mut toml_value: Value = toml_str.parse::<Value>()?;
 
     // Process the TOML data
-    if let Some(fonts) = toml_value.get("fonts") {
+    if let Some(fonts) = toml_value.get("fonts") {  // Extract the "fonts" section in the original TOML structure
         if let Some(fonts_array) = fonts.as_array() {
             let mut expanded_fonts = Vec::new();
 
@@ -121,8 +125,9 @@ fn preprocess_font_config(toml_str: &str) -> Result<String> {
                 }
             }
 
-            // Update the "fonts" section in the original TOML structure
+            // Get a mutable reference of the TOML table
             if let Some(table) = toml_value.as_table_mut() {
+                // Replace the original "fonts" section with the expanded fonts
                 table.insert("fonts".to_string(), Value::Array(expanded_fonts));
             }
         }
@@ -135,12 +140,11 @@ fn preprocess_font_config(toml_str: &str) -> Result<String> {
     Ok(new_toml_string)
 }
 
-
 // add test
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
     use super::*;
+    use std::path::PathBuf;
 
     #[test]
     fn test_serialize_fonts_to_toml() {
@@ -179,7 +183,6 @@ stretch = 2000
 "#;
         assert_eq!(toml_string, expected_toml);
     }
-
 
     #[test]
     fn test_deserialize_fonts_from_toml() {
@@ -235,8 +238,8 @@ weight = [500, 700]
 
     #[test]
     fn test_deserialize_fonts_from_file() {
-        let config_file = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("assets/font_configs/font_requirements.toml");
+        let config_file =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/font_configs/font_config.toml");
         // check if the file exists
         assert!(config_file.exists());
         let font_config = deserialize_fonts_from_file(&config_file).unwrap();
