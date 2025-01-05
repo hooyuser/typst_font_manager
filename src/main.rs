@@ -10,8 +10,7 @@ use clap::{Parser, Subcommand};
 use colored::Colorize;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use typst::diag::StrResult;
-use typst::text::{FontStretch, FontStyle, FontVariant, FontWeight};
+use typst::text::FontVariant;
 use walkdir::WalkDir;
 
 
@@ -19,39 +18,39 @@ use walkdir::WalkDir;
 use crate::command::{FontCommand};
 use crate::parse_font_config::TypstFont;
 
-pub fn fonts(path_str: &str) -> StrResult<()> {
-    let font_paths: Vec<PathBuf> = vec![path_str.into()];
-
-    for font_path in font_paths {
-        // Walk through the directory recursively
-        for entry in WalkDir::new(&font_path).into_iter().filter_map(|e| e.ok()) {
-            let path = entry.path();
-
-            if path.is_file() {
-                // Print the file name
-                if let Some(file_name) = path.file_name() {
-                    //println!("Processing [{}]", file_name.to_string_lossy());
-                    let fonts = process_font::Fonts::searcher().search_file(&path);
-
-                    for (name, infos) in fonts.book.families() {
-                        //println!("{name}");
-
-                        for info in infos {
-                            let FontVariant {
-                                style,
-                                weight,
-                                stretch,
-                            } = info.variant;
-                            //println!("- Style: {style:?}, Weight: {weight:?}, Stretch: {stretch:?}\n");
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Ok(())
-}
+// pub fn fonts(path_str: &str) -> StrResult<()> {
+//     let font_paths: Vec<PathBuf> = vec![path_str.into()];
+//
+//     for font_path in font_paths {
+//         // Walk through the directory recursively
+//         for entry in WalkDir::new(&font_path).into_iter().filter_map(|e| e.ok()) {
+//             let path = entry.path();
+//
+//             if path.is_file() {
+//                 // Print the file name
+//                 if let Some(file_name) = path.file_name() {
+//                     //println!("Processing [{}]", file_name.to_string_lossy());
+//                     let fonts = process_font::Fonts::searcher().search_file(&path);
+//
+//                     for (name, infos) in fonts.book.families() {
+//                         //println!("{name}");
+//
+//                         for info in infos {
+//                             let FontVariant {
+//                                 style,
+//                                 weight,
+//                                 stretch,
+//                             } = info.variant;
+//                             //println!("- Style: {style:?}, Weight: {weight:?}, Stretch: {stretch:?}\n");
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//
+//     Ok(())
+// }
 
 pub fn create_font_path_map<P: AsRef<Path>>(font_dir: P) -> BTreeMap<TypstFont, PathBuf> {
     let mut font_map = BTreeMap::<TypstFont, PathBuf>::new();
@@ -161,11 +160,11 @@ fn process_command(args: &FontCommand, action: &str) {
 }
 
 
-fn show_fonts() {
-    let path_str = "./assets/FONTS_LIBRARY/";
-    //let path_str = "/Users/chy/Projects/Typst/algebraic_geometry/fonts/";
-    fonts(path_str).unwrap();
-}
+// fn show_fonts() {
+//     let path_str = "./assets/FONTS_LIBRARY/";
+//     //let path_str = "/Users/chy/Projects/Typst/algebraic_geometry/fonts/";
+//     fonts(path_str).unwrap();
+// }
 
 fn main() {
     let cli = Cli::parse();
@@ -199,10 +198,10 @@ mod tests {
     use super::*;
     use crate::utils::font_utils::get_system_font_directories;
 
-    #[test]
-    fn test_show_fonts() {
-        show_fonts();
-    }
+    // #[test]
+    // fn test_show_fonts() {
+    //     show_fonts();
+    // }
 
     #[test]
     fn test_get_system_font_dirs() {
