@@ -85,7 +85,7 @@ jobs:
           fi
           
       - name: Build Release Binary
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo build --release --locked --target ${{ matrix.target }}
 
       - name: Extract Binary Name from Cargo.toml
         id: binary_name
@@ -164,13 +164,13 @@ jobs:
         run: ls -R artifacts
   
       - name: Upload Binaries to Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/*-linux
-            artifacts/*-macos-intel
-            artifacts/*-macos-apple-silicon
-            artifacts/*-windows.exe
+            artifacts/typfont-linux
+            artifacts/typfont-macos-apple-silicon
+            artifacts/typfont-macos-intel
+            artifacts/typfont-windows.exe
           tag_name: ${{ env.TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
