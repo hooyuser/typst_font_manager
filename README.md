@@ -7,6 +7,8 @@
 - [CLI Command Guide](#cli-command-guide)
 - [GitHub CI Integration](#gitHub-ci-integration)
 
+<a name="font-configuration-for-typst-projects"/>
+
 ## 📚 **Font Configuration for Typst Projects**
 
 To use this font manager CLI tool with your Typst project, place a font configuration file named `font_config.toml` in the same directory as your Typst file `*.typ`.
@@ -53,6 +55,8 @@ weight = 400
 5. **Default Style and Weight:**  
    - If `style` is omitted, the default is `"Normal"`. No fuzzy matching is applied.  
    - If `weight` is omitted, the default is `400`.
+
+<a name="cli-command-guide"/>
 
 ## 🛠️ **CLI Command Guide**
 
@@ -139,6 +143,7 @@ This prevents Typst from falling back to unintended font variants, ensuring cons
 
 By following these steps, you'll have precise control over font management in your Typst projects, minimizing font-related issues and ensuring clarity in your setup.
 
+<a name="gitHub-ci-integration"/>
 
 ## 🚀 **GitHub CI Integration**
 
