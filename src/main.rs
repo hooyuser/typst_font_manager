@@ -5,7 +5,6 @@ mod process_font;
 mod utils;
 
 use clap::Parser;
-use colored::Colorize;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -151,13 +150,15 @@ fn process_command(args: &FontCommand, action: &str) {
 
 // fn show_fonts() {
 //     let path_str = "./assets/FONTS_LIBRARY/";
-//     //let path_str = "/Users/chy/Projects/Typst/algebraic_geometry/fonts/";
 //     fonts(path_str).unwrap();
 // }
 
 fn main() {
     #[cfg(debug_assertions)]
-    println!("{}", "Dev Version".bold().red());
+    {
+        use colored::Colorize;
+        println!("{}", "Dev Version".bold().red());
+    }
 
     let cli = Cli::parse();
     match &cli.command {
@@ -203,7 +204,6 @@ fn main() {
                             None => library_dirs[0].clone(),
                         };
 
-
                         let mut font_lib_map = font_lib_map.clone();
                         // For the output toml file, strip the library root path
                         strip_library_root_path(&mut font_lib_map, &output_dir);
@@ -222,8 +222,6 @@ fn main() {
                     }
                 }
             }
-
-
         }
     }
 }

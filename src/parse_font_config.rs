@@ -87,6 +87,7 @@ pub fn deserialize_fonts_from_file<P: AsRef<Path>>(file_path: P) -> Result<FontC
     deserialize_fonts_from_toml(&content)
 }
 
+#[allow(dead_code)]
 pub fn serialize_fonts_to_toml(font_config: FontConfig) -> Result<String> {
     let toml_string = toml::to_string(&font_config)?;
     Ok(toml_string)

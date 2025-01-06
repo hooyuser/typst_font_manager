@@ -634,31 +634,36 @@ mod tests {
 
     #[test]
     fn test_local_font_library_serialization() {
-        // Get the target directory
+        use dotenv::dotenv;
+        use std::env;
+        use std::fs;
+        use std::path::PathBuf;
+
+        dotenv().ok(); // Load .env file
+
         let target_dir = env::var("CARGO_TARGET_DIR")
             .map(PathBuf::from)
             .unwrap_or_else(|_| PathBuf::from("target"));
 
-        // Ensure the test-specific directory exists
         let test_dir = target_dir.join("test_outputs");
         fs::create_dir_all(&test_dir).expect("Failed to create test_outputs directory");
 
-        // Define the file path in target/test_outputs
         let file_path = test_dir.join("font_library.toml");
 
-        let library_dir = PathBuf::from("/Users/chy/FONT_LIBRARY");
+        let library_dir = env::var("FONT_LIBRARY_PATH")
+            .map(PathBuf::from)
+            .expect("FONT_LIBRARY_PATH environment variable is not set");
+
         let library_dirs = LibraryDirs::Local(vec![library_dir.clone()]);
 
         let mut font_lib_map = create_font_path_map_from_dirs(&library_dirs);
 
-        // strip the library root path
         strip_library_root_path(&mut font_lib_map, &library_dir);
 
-        // Sample TypstFontLibrary
         let library = TypstFontLibrary {
             fonts: font_lib_map,
         };
-        // Serialize to TOML and write to the target directory
+
         let toml = toml::to_string_pretty(&library).expect("Failed to serialize to TOML");
         fs::write(&file_path, toml.as_bytes()).expect("Failed to write to file");
 

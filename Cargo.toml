@@ -2,6 +2,13 @@
 name = "typst_font_manager"
 version = "0.1.0"
 edition = "2021"
+authors = ["DC <hooyuser@outlook.com>"]
+description = "A CLI tool to manage fonts for Typst projects"
+license = "GPL-3.0"
+repository = "https://github.com/hooyuser/typst_font_manager"
+readme = "README.md"
+keywords = ["cli", "tool", "typst", "font"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 typst = { git = "https://github.com/typst/typst", branch = "main" }
@@ -14,7 +21,8 @@ anyhow = "1.0"
 colored = "2.2"
 reqwest = { version = "0.12", features = ["blocking"] }
 
-
+[dev-dependencies]
+dotenv = "0.15"
 
 [[bin]]
 name = "typfont" # Specify the desired binary name here

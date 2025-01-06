@@ -8,65 +8,66 @@
 //! - For math: New Computer Modern Math
 //! - For code: Deja Vu Sans Mono
 
-use std::path::PathBuf;
-use std::sync::OnceLock;
-use std::{fs, path::Path};
+//use std::fs;
+use fontdb::Database;
+//use fontdb::{Database, Source};
+// use std::path::PathBuf;
+// use std::sync::OnceLock;
+use std::path::Path;
 
-use fontdb::{Database, Source};
-
-use typst::text::{Font, FontBook, FontInfo};
-
+use typst::text::{FontBook, FontInfo};
+//use typst::text::{Font};
 
 /// Holds details about the location of a font and lazily the font itself.
-#[derive(Debug)]
-pub struct FontSlot {
-    /// The path at which the font can be found on the system.
-    path: Option<PathBuf>,
-    /// The index of the font in its collection. Zero if the path does not point
-    /// to a collection.
-    index: u32,
-    /// The lazily loaded font.
-    font: OnceLock<Option<Font>>,
-}
+// #[derive(Debug)]
+// pub struct FontSlot {
+//     /// The path at which the font can be found on the system.
+//     path: Option<PathBuf>,
+//     /// The index of the font in its collection. Zero if the path does not point
+//     /// to a collection.
+//     index: u32,
+//     /// The lazily loaded font.
+//     font: OnceLock<Option<Font>>,
+// }
 
-impl FontSlot {
-    /// Returns the path at which the font can be found on the system, or `None`
-    /// if the font was embedded.
-    pub fn path(&self) -> Option<&Path> {
-        self.path.as_deref()
-    }
-
-    /// Returns the index of the font in its collection. Zero if the path does
-    /// not point to a collection.
-    pub fn index(&self) -> u32 {
-        self.index
-    }
-
-    /// Get the font for this slot. This loads the font into memory on first
-    /// access.
-    pub fn get(&self) -> Option<Font> {
-        self.font
-            .get_or_init(|| {
-                let data = fs::read(
-                    self.path
-                        .as_ref()
-                        .expect("`path` is not `None` if `font` is uninitialized"),
-                )
-                    .ok()?
-                    .into();
-                Font::new(data, self.index)
-            })
-            .clone()
-    }
-}
+// impl FontSlot {
+//     /// Returns the path at which the font can be found on the system, or `None`
+//     /// if the font was embedded.
+//     pub fn path(&self) -> Option<&Path> {
+//         self.path.as_deref()
+//     }
+//
+//     /// Returns the index of the font in its collection. Zero if the path does
+//     /// not point to a collection.
+//     pub fn index(&self) -> u32 {
+//         self.index
+//     }
+//
+//     /// Get the font for this slot. This loads the font into memory on first
+//     /// access.
+//     pub fn get(&self) -> Option<Font> {
+//         self.font
+//             .get_or_init(|| {
+//                 let data = fs::read(
+//                     self.path
+//                         .as_ref()
+//                         .expect("`path` is not `None` if `font` is uninitialized"),
+//                 )
+//                     .ok()?
+//                     .into();
+//                 Font::new(data, self.index)
+//             })
+//             .clone()
+//     }
+// }
 
 /// The result of a font search, created by calling [`FontSearcher::search`].
 #[derive(Debug)]
 pub struct Fonts {
     /// Metadata about all discovered fonts.
     pub book: FontBook,
-    /// Slots that the fonts are loaded into.
-    pub fonts: Vec<FontSlot>,
+    ///// Slots that the fonts are loaded into.
+    //pub fonts: Vec<FontSlot>,
 }
 
 impl Fonts {
@@ -86,7 +87,7 @@ impl Fonts {
 pub struct FontSearcher {
     db: Database,
     book: FontBook,
-    fonts: Vec<FontSlot>,
+    //fonts: Vec<FontSlot>,
 }
 
 impl FontSearcher {
@@ -96,10 +97,9 @@ impl FontSearcher {
         Self {
             db: Database::new(),
             book: FontBook::new(),
-            fonts: vec![],
+            //fonts: vec![],
         }
     }
-
 
     /// Start searching for and loading fonts. To additionally load fonts
     /// from specific directories, use [`search_with`][Self::search_with].
@@ -163,19 +163,17 @@ impl FontSearcher {
     //     }
     // }
 
-    pub fn search_file<P: AsRef<Path>>(&mut self, font_path: P) -> Fonts
-    {
+    pub fn search_file<P: AsRef<Path>>(&mut self, font_path: P) -> Fonts {
         // Font paths have the highest priority.
         self.db.load_font_file(&font_path).unwrap();
 
-
         for face in self.db.faces() {
-            let path = match &face.source {
-                Source::File(path) | Source::SharedFile(path, _) => path,
-                // We never add binary sources to the database, so there
-                // shouln't be any.
-                Source::Binary(_) => continue,
-            };
+            // let path = match &face.source {
+            //     Source::File(path) | Source::SharedFile(path, _) => path,
+            //     // We never add binary sources to the database, so there
+            //     // shouln't be any.
+            //     Source::Binary(_) => continue,
+            // };
 
             let info = self
                 .db
@@ -184,17 +182,17 @@ impl FontSearcher {
 
             if let Some(info) = info {
                 self.book.push(info);
-                self.fonts.push(FontSlot {
-                    path: Some(path.clone()),
-                    index: face.index,
-                    font: OnceLock::new(),
-                });
+                // self.fonts.push(FontSlot {
+                //     path: Some(path.clone()),
+                //     index: face.index,
+                //     font: OnceLock::new(),
+                // });
             }
         }
 
         Fonts {
             book: std::mem::take(&mut self.book),
-            fonts: std::mem::take(&mut self.fonts),
+            //fonts: std::mem::take(&mut self.fonts),
         }
     }
 }
