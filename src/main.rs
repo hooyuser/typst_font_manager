@@ -1,21 +1,17 @@
+mod command;
+mod font_manager;
 mod parse_font_config;
 mod process_font;
 mod utils;
-mod font_manager;
-mod command;
 
-
-
-use clap::{Parser, Subcommand};
-use colored::Colorize;
+use clap::Parser;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use typst::text::FontVariant;
 use walkdir::WalkDir;
 
-
-
-use crate::command::{FontCommand};
+use crate::command::{Commands, FontCommand};
+use crate::font_manager::{get_github_font_library_info, LibraryDirs};
 use crate::parse_font_config::TypstFont;
 
 // pub fn fonts(path_str: &str) -> StrResult<()> {
@@ -65,17 +61,26 @@ pub fn create_font_path_map<P: AsRef<Path>>(font_dir: P) -> BTreeMap<TypstFont, 
     font_map
 }
 
-fn create_font_path_map_from_dirs<P: AsRef<Path>>(
-    font_dirs: &[P],
-) -> BTreeMap<TypstFont, PathBuf> {
+fn create_font_path_map_from_dirs(library_dirs: &LibraryDirs) -> BTreeMap<TypstFont, PathBuf> {
     let mut font_map = BTreeMap::<TypstFont, PathBuf>::new();
 
-    for font_dir in font_dirs {
-        // Walk through the directory recursively
-        for entry in WalkDir::new(&font_dir).into_iter().filter_map(|e| e.ok()) {
-            let path = entry.path();
+    match library_dirs {
+        LibraryDirs::GitHub(github_repos) => {
+            for github_repo in github_repos {
+                // github_repo is a string like "owner/repo"
+                let github_font_map = get_github_font_library_info(&github_repo)
+                    .expect("Error Occurs when getting fonts from GitHub");
+                font_map.extend(github_font_map);
+            }
+        }
+        LibraryDirs::Local(font_dirs) => {
+            for font_dir in font_dirs {
+                for entry in WalkDir::new(&font_dir).into_iter().filter_map(|e| e.ok()) {
+                    let path = entry.path();
 
-            font_path_map_update(&mut font_map, path);
+                    font_path_map_update(&mut font_map, path);
+                }
+            }
         }
     }
 
@@ -122,27 +127,8 @@ struct Cli {
     command: Commands,
 }
 
-#[derive(Subcommand, Debug)]
-enum Commands {
-    /// Check font configuration
-    Check(FontCommand),
-    /// Update font configuration
-    Update(FontCommand),
-    /// Show font library information
-    CheckLib(CheckLibCommand),
-}
-
-
-
-#[derive(Parser, Debug)]
-struct CheckLibCommand {
-    /// Path to the font library directory
-    #[arg(short, long, num_args = 1.., value_name = "DIR")]
-    library: Option<Vec<PathBuf>>,
-}
-
-
 fn process_command(args: &FontCommand, action: &str) {
+    args.validate().unwrap();
     match font_manager::FontManager::new(args, action) {
         Ok(font_manager) => {
             font_manager.print_status();
@@ -159,7 +145,6 @@ fn process_command(args: &FontCommand, action: &str) {
     }
 }
 
-
 // fn show_fonts() {
 //     let path_str = "./assets/FONTS_LIBRARY/";
 //     //let path_str = "/Users/chy/Projects/Typst/algebraic_geometry/fonts/";
@@ -173,9 +158,13 @@ fn main() {
         Commands::Check(args) => process_command(args, "Checking"),
         Commands::Update(args) => process_command(args, "Updating"),
         Commands::CheckLib(args) => {
-            let library_dirs = match &args.library {
-                Some(dirs) => dirs.clone(),
-                None => utils::font_utils::get_system_font_directories(),
+            let library_dirs = if args.github {
+                LibraryDirs::GitHub(args.library.clone().unwrap())
+            } else {
+                LibraryDirs::Local(match &args.library {
+                    Some(dirs) => dirs.clone(),
+                    None => utils::font_utils::get_system_font_directories(),
+                })
             };
             let font_lib_map = create_font_path_map_from_dirs(&library_dirs);
 
@@ -195,7 +184,6 @@ fn main() {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::utils::font_utils::get_system_font_directories;
 
     // #[test]

@@ -4,12 +4,13 @@ use crate::parse_font_config::{
 };
 use crate::{create_font_path_map, create_font_path_map_from_dirs, utils};
 use colored::Colorize;
-use reqwest::blocking::Client;
+use reqwest::blocking::{get, Client};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::slice::Iter;
 
 const EMBEDDED_FONTS: &str = r#"
 [[fonts]]
@@ -55,10 +56,28 @@ weight = [400, 450]
 stretch = 1000
 "#;
 
+pub(crate) enum LibraryDirs {
+    Local(Vec<PathBuf>),  // Local font library directories, like /usr/share/fonts
+    GitHub(Vec<PathBuf>), // GitHub repositories, like "owner/repo"
+}
+
+// Implement IntoIterator for `&LibraryDirs`
+impl<'a> IntoIterator for &'a LibraryDirs {
+    type Item = &'a PathBuf;
+    type IntoIter = Iter<'a, PathBuf>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self {
+            LibraryDirs::Local(paths) => paths.iter(),
+            LibraryDirs::GitHub(paths) => paths.iter(),
+        }
+    }
+}
+
 pub(crate) struct FontManager<'a> {
     config_file: &'a Path,      // Path to the configuration file
     font_config: FontConfig,    // Font configuration deserialized from font_config.toml
-    library_dirs: Vec<PathBuf>, // Source font library directory paths
+    library_dirs: LibraryDirs,  // Source font library directory paths
     absolute_font_dir: PathBuf, // Absolute path of the project's font directory
     font_sets: FontSets,        // Font sets to manage
     action: &'a str,
@@ -73,6 +92,47 @@ struct FontSets {
     library: BTreeMap<TypstFont, PathBuf>,
 }
 
+fn get_first_two_segments<P>(repo: &P) -> Option<&Path>
+where
+    P: AsRef<Path> + ?Sized,
+{
+    let p = repo.as_ref();
+
+    // Count components first. We need at least 3:
+    //   1. user_name
+    //   2. my_repo
+    //   3. something_else (dir/sad.txt, etc.)
+    if p.components().count() < 3 {
+        return None;
+    }
+
+    // Go up 2 parent directories to remove the last two components.
+    // Example:
+    //   "user_name/my_repo/dir/sad.txt".parent() -> "user_name/my_repo/dir"
+    //                              .parent() -> "user_name/my_repo"
+    p.parent().and_then(|one_up| one_up.parent())
+}
+
+fn get_remaining_after_two_segments<P>(repo: &P) -> Option<&Path>
+where
+    P: AsRef<Path> + ?Sized,
+{
+    let p = repo.as_ref();
+    let mut comps = p.components();
+
+    // Skip first 2 segments.
+    comps.next()?; // "user_name"
+    comps.next()?; // "my_repo"
+
+    // The rest of the components are our remainder.
+    let remainder = comps.as_path();
+    if remainder.as_os_str().is_empty() {
+        None
+    } else {
+        Some(remainder)
+    }
+}
+
 impl<'a> FontManager<'a> {
     pub(crate) fn new(args: &'a FontCommand, action: &'a str) -> Result<Self, String> {
         // args.config is the path of font_config.toml specified by the user or the default value
@@ -83,10 +143,19 @@ impl<'a> FontManager<'a> {
 
         // use user-specified font directories (args.library) if provided,
         // otherwise, use the system's default font directories.
-        let library_dirs = args
-            .library
-            .clone()
-            .unwrap_or_else(utils::font_utils::get_system_font_directories);
+        let library_dirs = if args.github {
+            LibraryDirs::GitHub(
+                args.library
+                    .clone()
+                    .expect("GitHub repository not provided"),
+            )
+        } else {
+            LibraryDirs::Local(
+                args.library
+                    .clone()
+                    .unwrap_or_else(utils::font_utils::get_system_font_directories),
+            )
+        };
 
         // Deserialize the font configuration from font_config.toml
         let font_config = deserialize_fonts_from_file(&args.config)
@@ -137,7 +206,7 @@ impl<'a> FontManager<'a> {
     }
 
     fn initialize_font_sets(
-        library_dirs: &[PathBuf],
+        library_dirs: &LibraryDirs,
         font_config: &FontConfig,
         font_dir: &Path,
     ) -> Result<FontSets, String> {
@@ -159,7 +228,7 @@ impl<'a> FontManager<'a> {
 
         let redundant = current.difference(&required).cloned().collect();
 
-        let font_lib_map = create_font_path_map_from_dirs(library_dirs);
+        let font_lib_map = create_font_path_map_from_dirs(&library_dirs);
 
         Ok(FontSets {
             required,
@@ -265,12 +334,10 @@ impl<'a> FontManager<'a> {
         }
     }
 
-    pub(crate) fn download_fonts_from_github(
-        &self,
-        web_library: &BTreeMap<TypstFont, PathBuf>,
-        github_repo: &str,
-    ) -> Result<(), String> {
+    pub(crate) fn download_fonts_from_github(&self, font: &TypstFont) -> Result<(), String> {
         let client = Client::new();
+
+        let web_library = &self.font_sets.library;
 
         if web_library.is_empty() {
             println!("\nNo missing fonts to download");
@@ -279,40 +346,47 @@ impl<'a> FontManager<'a> {
 
         println!("\n- {}", "Downloading fonts from GitHub".bold());
 
-        for (font, relative_path) in web_library {
-            let url = format!(
-                "https://raw.githubusercontent.com/{}/main/{}",
-                github_repo,
-                relative_path.display()
-            );
-            let dest_path = self
-                .absolute_font_dir
-                .join(relative_path.file_name().unwrap());
+        let relative_path = web_library
+            .get(font)
+            .ok_or_else(|| format!("Font not found: {:?}", font))?;
 
-            println!("  Downloading {url} to {:?}", dest_path);
+        let github_repo = get_first_two_segments(&relative_path).expect("Invalid GitHub repo path");
 
-            // Perform the HTTP GET request to download the font
-            let response = client
-                .get(&url)
-                .send()
-                .map_err(|e| format!("Failed to download {}: {}", font, e))?;
+        let font_relative_path =
+            get_remaining_after_two_segments(&relative_path).expect("Invalid font path");
 
-            if response.status().is_success() {
-                let mut file = fs::File::create(&dest_path)
-                    .map_err(|e| format!("Failed to create file {:?}: {}", dest_path, e))?;
-                let content = response
-                    .bytes()
-                    .map_err(|e| format!("Failed to read content of {}: {}", font, e))?;
-                file.write_all(&content)
-                    .map_err(|e| format!("Failed to write font file {:?}: {}", dest_path, e))?;
-                println!("  Successfully downloaded {:?}", font);
-            } else {
-                return Err(format!(
-                    "Failed to download {}. HTTP status: {}",
-                    font,
-                    response.status()
-                ));
-            }
+        let url = format!(
+            "https://raw.githubusercontent.com/{}/main/{}",
+            github_repo.display(),
+            font_relative_path.display()
+        );
+        let dest_path = self
+            .absolute_font_dir
+            .join(relative_path.file_name().unwrap());
+
+        println!("  Downloading {url} to {:?}", dest_path);
+
+        // Perform the HTTP GET request to download the font
+        let response = client
+            .get(&url)
+            .send()
+            .map_err(|e| format!("Failed to download {}: {}", font, e))?;
+
+        if response.status().is_success() {
+            let mut file = fs::File::create(&dest_path)
+                .map_err(|e| format!("Failed to create file {:?}: {}", dest_path, e))?;
+            let content = response
+                .bytes()
+                .map_err(|e| format!("Failed to read content of {}: {}", font, e))?;
+            file.write_all(&content)
+                .map_err(|e| format!("Failed to write font file {:?}: {}", dest_path, e))?;
+            println!("  Successfully downloaded {:?}", font);
+        } else {
+            return Err(format!(
+                "Failed to download {}. HTTP status: {}",
+                font,
+                response.status()
+            ));
         }
 
         Ok(())
@@ -329,25 +403,33 @@ impl<'a> FontManager<'a> {
         for font in &self.font_sets.missing {
             // Get the path of the font file in the library
             if let Some(source_path) = self.font_sets.library.get(font) {
-                // dest_path is where the font file will be copied to
-                // it is the project's font directory joined with the file name of the font file
-                let dest_path = self
-                    .absolute_font_dir
-                    .join(&source_path.file_name().unwrap());
-                println!(
-                    "  Copying {source_path:?} to {:?}",
-                    Path::new(
-                        &self
-                            .font_config
-                            .font_dir
-                            .clone()
-                            .unwrap_or_else(|| "fonts".to_string())
-                    )
-                    .join(&source_path.file_name().unwrap())
-                );
-                // Copy the font file from the library to the project's font directory
-                fs::copy(&source_path, &dest_path)
-                    .map_err(|_| format!("Failed to copy font file: {:?}", font))?;
+                match self.library_dirs {
+                    LibraryDirs::Local(_) => {
+                        // dest_path is where the font file will be copied to
+                        // it is the project's font directory joined with the file name of the font file
+                        let dest_path = self
+                            .absolute_font_dir
+                            .join(&source_path.file_name().unwrap());
+                        println!(
+                            "  Copying {source_path:?} to {:?}",
+                            Path::new(
+                                &self
+                                    .font_config
+                                    .font_dir
+                                    .clone()
+                                    .unwrap_or_else(|| "fonts".to_string())
+                            )
+                            .join(&source_path.file_name().unwrap())
+                        );
+                        // Copy the font file from the library to the project's font directory
+                        fs::copy(&source_path, &dest_path)
+                            .map_err(|_| format!("Failed to copy font file: {:?}", font))?;
+                    }
+                    LibraryDirs::GitHub(_) => {
+                        Self::download_fonts_from_github(&self, &font)
+                            .expect("Failed to download fonts from GitHub");
+                    }
+                }
             } else {
                 println!("Font not found in source library: {:?}", font);
             }
@@ -360,7 +442,7 @@ impl<'a> FontManager<'a> {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TypstFontLibrary {
     #[serde(with = "font_map_serde")]
-    pub library: BTreeMap<TypstFont, PathBuf>,
+    pub fonts: BTreeMap<TypstFont, PathBuf>,
 }
 
 // Wrapper struct for serialization
@@ -406,6 +488,86 @@ mod font_map_serde {
     }
 }
 
+pub fn strip_library_root_path(
+    font_lib_map: &mut BTreeMap<TypstFont, PathBuf>,
+    library_root_path: &Path,
+) {
+    for path in font_lib_map.values_mut() {
+        if let Ok(stripped) = path.strip_prefix(library_root_path) {
+            *path = stripped.to_path_buf();
+        }
+    }
+}
+
+// pub fn download_font_library(github_repo: &str) -> Result<(), Box<dyn std::error::Error>> {
+//     // Construct the URL to the raw file on GitHub
+//     let url = format!("https://raw.githubusercontent.com/{}/main/font_library.toml", github_repo);
+//
+//     // Send a GET request to fetch the file
+//     let response = get(&url)?;
+//     if !response.status().is_success() {
+//         return Err(format!("Failed to download file: HTTP {}", response.status()).into());
+//     }
+//
+//     // Create a local file named `font_library.toml`
+//     let mut dest = File::create("font_library.toml")?;
+//     let mut content = response.bytes()?;
+//     copy(&mut content.as_ref(), &mut dest)?;
+//
+//     println!("font_library.toml has been successfully downloaded!");
+//     Ok(())
+// }
+
+pub fn download_font_library_info<P>(github_repo: P) -> Result<String, Box<dyn std::error::Error>>
+where
+    P: AsRef<Path>,
+{
+    // Convert the input into a string
+    let repo_str = github_repo
+        .as_ref()
+        .to_str()
+        .ok_or_else(|| "Failed to convert path to string")?;
+
+    // Construct the URL to the raw file on GitHub
+    let url = format!(
+        "https://raw.githubusercontent.com/{}/main/font_library.toml",
+        repo_str
+    );
+
+    // Send a GET request to fetch the file
+    let response = get(&url)?;
+    if !response.status().is_success() {
+        return Err(format!("Failed to download file: HTTP {}", response.status()).into());
+    }
+
+    // Read the response body as text
+    let content = response.text()?;
+
+    Ok(content)
+}
+
+pub fn get_github_font_library_info<P>(
+    github_repo: P,
+) -> Result<BTreeMap<TypstFont, PathBuf>, Box<dyn std::error::Error>>
+where
+    P: AsRef<Path>,
+{
+    // Download the font library info
+    let content =
+        download_font_library_info(&github_repo).expect("Failed to download font library info");
+
+    // deserialize the font_library.toml file
+    let mut library: TypstFontLibrary =
+        toml::from_str(&content).expect("Failed to deserialize from TOML");
+
+    // Prepend the github_repo to the font paths
+    for path in library.fonts.values_mut() {
+        *path = PathBuf::from(&github_repo.as_ref()).join(&mut *path);
+    }
+
+    Ok(library.fonts)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -428,10 +590,10 @@ mod tests {
 
         // Sample TypstFontLibrary
         let mut library = TypstFontLibrary {
-            library: BTreeMap::new(),
+            fonts: BTreeMap::new(),
         };
 
-        library.library.insert(
+        library.fonts.insert(
             TypstFont {
                 family_name: "Arial".to_string(),
                 style: FontStyle::Normal,
@@ -441,7 +603,7 @@ mod tests {
             PathBuf::from("fonts/arial.ttf"),
         );
 
-        library.library.insert(
+        library.fonts.insert(
             TypstFont {
                 family_name: "Times New Roman".to_string(),
                 style: FontStyle::Italic,
@@ -462,7 +624,7 @@ mod tests {
         let deserialized: TypstFontLibrary =
             toml::from_str(&contents).expect("Failed to deserialize from TOML");
 
-        assert_eq!(library.library, deserialized.library);
+        assert_eq!(library.fonts, deserialized.fonts);
     }
 
     #[test]
@@ -479,17 +641,33 @@ mod tests {
         // Define the file path in target/test_outputs
         let file_path = test_dir.join("font_library.toml");
 
-        let library_dirs = vec![PathBuf::from("/Users/chy/FONT_LIBRARY")];
-        let font_lib_map = create_font_path_map_from_dirs(&library_dirs);
+        let library_dir = PathBuf::from("/Users/chy/FONT_LIBRARY");
+        let library_dirs = LibraryDirs::Local(vec![library_dir.clone()]);
+
+        let mut font_lib_map = create_font_path_map_from_dirs(&library_dirs);
+
+        // strip the library root path
+        strip_library_root_path(&mut font_lib_map, &library_dir);
 
         // Sample TypstFontLibrary
         let library = TypstFontLibrary {
-            library: font_lib_map,
+            fonts: font_lib_map,
         };
         // Serialize to TOML and write to the target directory
         let toml = toml::to_string_pretty(&library).expect("Failed to serialize to TOML");
         fs::write(&file_path, toml.as_bytes()).expect("Failed to write to file");
 
         println!("TOML written to: {:?}", file_path);
+    }
+
+    #[test]
+    fn test_download_font_library_info() {
+        let github_repo = "hooyuser/Font_Library";
+        let content = download_font_library_info(github_repo).unwrap();
+        println!("{}", content);
+
+        // deserialize the content
+        let library: TypstFontLibrary = toml::from_str(&content).unwrap();
+        println!("{:?}", library);
     }
 }
