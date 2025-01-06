@@ -60,8 +60,12 @@ jobs:
       - name: Validate Cargo Cache
         run: |
           echo "Cargo Cache Contents:"
-          ls -al ~/.cargo/registry
-          ls -al ~/.cargo/git
+          ls -al ~/.cargo/registry || echo "~/.cargo/registry not found."
+          if [ -d ~/.cargo/git ]; then
+            ls -al ~/.cargo/git
+          else
+            echo "~/.cargo/git directory does not exist. Skipping listing."
+          fi
 
       - name: Cargo Check Dependencies
         run: cargo check --target ${{ matrix.target }}
