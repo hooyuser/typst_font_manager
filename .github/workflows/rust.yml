@@ -34,6 +34,17 @@ jobs:
       - name: Build Release Binary
         run: cargo build --release
 
+      - name: Extract Binary Name from Cargo.toml
+        id: binary_name
+        run: |
+          BINARY_NAME=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[0].targets[] | select(.kind[] == "bin") | .name')
+          echo "BINARY_NAME=${BINARY_NAME}" >> $GITHUB_ENV
+
+      - name: Verify Binary Existence
+        run: |
+          echo "Binary Name: $BINARY_NAME"
+          ls target/release/$BINARY_NAME
+
       - name: Create Git Tag
         if: github.ref == 'refs/heads/main'
         run: |
@@ -47,7 +58,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            target/release/<your-binary-name>
+            target/release/${{ env.BINARY_NAME }}
           tag_name: ${{ env.TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
