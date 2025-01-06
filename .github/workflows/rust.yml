@@ -25,8 +25,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           key: rust-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            rust-${{ runner.os }}
+          cache-on-failure: true
 
       - name: Build Release Binary
         run: cargo build --release
