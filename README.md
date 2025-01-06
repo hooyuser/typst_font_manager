@@ -10,7 +10,7 @@ To use this font manager CLI tool with your Typst project, place a font configur
 Below is an example `font_config.toml` file that explicitly specifies **5 fonts** from **3 font families**:  
 - **Noto Sans** (3 variants)  
 - **Noto Sans Display** (1 variant)  
-- **Noto Serif** (1 variant)  
+- **STIXTwoText** (1 variant)  
 
 ```toml
 font_dir = "fonts"
@@ -26,7 +26,7 @@ style = "Normal"
 weight = 500
 
 [[fonts]]
-family_name = "Noto Serif"
+family_name = "STIXTwoText"
 style = "Italic"
 weight = 400
 ```
