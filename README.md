@@ -152,7 +152,7 @@ If you want to avoid tracking numerous font files in your Typst project's GitHub
 ### **1 Generate Font Library Information**  
 - Use the following command to generate font library information:  
    ```sh
-   ./typfont
+   ./typfont check-lib -l "/Users/goodguy/font_lib" -o
    ```  
 - This should produce a file `font_library.toml` at the root path of your font library.
 ---
