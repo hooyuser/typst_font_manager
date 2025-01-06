@@ -162,15 +162,24 @@ jobs:
   
       - name: List Artifacts
         run: ls -R artifacts
+
+      - name: Debug Binary Paths
+        run: |
+          echo "Files in artifacts directory:"
+          find artifacts -type f
+          
+      - name: Verify Artifact Creation
+        run: |
+          ls -al artifacts
   
       - name: Upload Binaries to Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/typfont-linux
-            artifacts/typfont-macos-apple-silicon
-            artifacts/typfont-macos-intel
-            artifacts/typfont-windows.exe
+            artifacts/${{ env.BINARY_NAME }}_linux
+            artifacts/${{ env.BINARY_NAME }}_macos-apple-silicon
+            artifacts/${{ env.BINARY_NAME }}_macos-intel
+            artifacts/${{ env.BINARY_NAME }}_windows.exe
           tag_name: ${{ env.TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
