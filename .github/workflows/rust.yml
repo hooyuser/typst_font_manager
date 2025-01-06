@@ -54,36 +54,10 @@ jobs:
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          key: rust-${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+          key: rust-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+          shared-key: rust-${{ matrix.target }}
           cache-on-failure: true
 
-      - name: Validate Cargo Cache (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          echo "Cargo Cache Contents:"
-          if (Test-Path "$env:CARGO_HOME\registry") {
-            Get-ChildItem -Path "$env:CARGO_HOME\registry" -Recurse
-          } else {
-            echo "$env:CARGO_HOME\registry not found."
-          }
-          if (Test-Path "$env:CARGO_HOME\git") {
-            Get-ChildItem -Path "$env:CARGO_HOME\git" -Recurse
-          } else {
-            echo "$env:CARGO_HOME\git directory does not exist. Skipping listing."
-          }
-      
-      - name: Validate Cargo Cache (Linux/macOS)
-        if: runner.os != 'Windows'
-        run: |
-          echo "Cargo Cache Contents:"
-          ls -al ~/.cargo/registry || echo "~/.cargo/registry not found."
-          if [ -d ~/.cargo/git ]; then
-            ls -al ~/.cargo/git
-          else
-            echo "~/.cargo/git directory does not exist. Skipping listing."
-          fi
-          
       - name: Build Release Binary
         run: cargo build --release --locked --target ${{ matrix.target }}
 
@@ -94,43 +68,22 @@ jobs:
           BINARY_NAME=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[0].targets[] | select(.kind[] == "bin") | .name')
           echo "BINARY_NAME=${BINARY_NAME}" >> $GITHUB_ENV
 
-      - name: Verify Binary Existence (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
+      - name: Verify Binary Existence
         run: |
-          echo "Windows platform detected"
-          if (Test-Path "target\${{ matrix.target }}\release\${{ env.BINARY_NAME }}.exe") {
-            Write-Host "Binary exists: target\${{ matrix.target }}\release\${{ env.BINARY_NAME }}.exe"
-          } else {
-            Write-Error "Binary not found!"
-            exit 1
-          }
-      
-      - name: Verify Binary Existence (Linux/macOS)
-        if: runner.os != 'Windows'
-        run: |
-          echo "Linux/macOS platform detected"
-          if [ -f target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} ]; then
-            echo "Binary exists: target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}"
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            test -f target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe || exit 1
           else
-            echo "Binary not found!"
-            exit 1
+            test -f target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} || exit 1
           fi
 
-      - name: Archive Binary (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
+      - name: Archive Binary
         run: |
-          echo "Archiving binary for Windows"
-          New-Item -ItemType Directory -Force -Path artifacts
-          Copy-Item target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe artifacts/${{ env.BINARY_NAME }}_windows.exe
-      
-      - name: Archive Binary (Linux/macOS)
-        if: runner.os != 'Windows'
-        run: |
-          echo "Archiving binary for Linux/macOS"
           mkdir -p artifacts
-          cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
+          else
+            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
+          fi
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
@@ -143,44 +96,44 @@ jobs:
     if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
-  
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-  
+
       - name: Create Git Tag
         run: |
           TAG="v$(date +%Y%m%d%H%M%S)"
           echo "TAG=${TAG}" >> $GITHUB_ENV
           git tag ${TAG}
           git push origin ${TAG}
-  
+
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-  
-      - name: List Artifacts
-        run: ls -R artifacts
 
-      - name: Debug Binary Paths
+      - name: Debug Artifact Paths
         run: |
           echo "Files in artifacts directory:"
           find artifacts -type f
-          
-      - name: Verify Artifact Creation
+
+      - name: Flatten Artifacts
         run: |
-          ls -al artifacts
-  
+          mkdir -p release_artifacts
+          find artifacts -type f -exec cp {} release_artifacts/ \;
+
+      - name: List Final Artifacts
+        run: ls -al release_artifacts
+
       - name: Upload Binaries to Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/${{ env.BINARY_NAME }}_linux
-            artifacts/${{ env.BINARY_NAME }}_macos-apple-silicon
-            artifacts/${{ env.BINARY_NAME }}_macos-intel
-            artifacts/${{ env.BINARY_NAME }}_windows.exe
+            release_artifacts/${{ env.BINARY_NAME }}_linux
+            release_artifacts/${{ env.BINARY_NAME }}_macos-apple-silicon
+            release_artifacts/${{ env.BINARY_NAME }}_macos-intel
+            release_artifacts/${{ env.BINARY_NAME }}_windows.exe
           tag_name: ${{ env.TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
