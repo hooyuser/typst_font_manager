@@ -44,7 +44,6 @@ jobs:
 
     outputs:
       binary_name: ${{ steps.binary_name.outputs.BINARY_NAME }}
-      # Pass the binary name `typfont` to the release job
 
     steps:
       - name: Checkout Repository
@@ -82,21 +81,32 @@ jobs:
             [[ -f target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} ]] || { echo "Binary not found on Unix-based OS"; exit 1; }
           fi
 
-      - name: Archive Binary
+      - name: Prepare Artifacts
         shell: bash
         run: |
           mkdir -p artifacts
+          
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            # Preserve existing binary
             cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
+            # Add new zipped binary with renamed typfont.exe
+            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe artifacts/typfont.exe
+            zip -j artifacts/${{ env.BINARY_NAME }}-v0.1.0-${{ matrix.artifact_suffix }}.zip artifacts/typfont.exe
           else
+            # Preserve existing binary
             cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
+            # Add new tar.gz binary with renamed typfont
+            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} artifacts/typfont
+            tar -czvf artifacts/${{ env.BINARY_NAME }}-v0.1.0-${{ matrix.artifact_suffix }}.tar.gz -C artifacts typfont
           fi
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}-${{ matrix.artifact_suffix }}
-          path: artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
+          path: |
+            artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
+            artifacts/${{ env.BINARY_NAME }}-v0.1.0-${{ matrix.artifact_suffix }}.*
 
   release:
     name: Create GitHub Release
@@ -120,18 +130,10 @@ jobs:
         with:
           path: artifacts
 
-      - name: Debug Artifact Paths
-        run: |
-          echo "Files in artifacts directory:"
-          find artifacts -type f
-
       - name: Flatten Artifacts
         run: |
           mkdir -p release_artifacts
           find artifacts -type f -exec cp {} release_artifacts/ \;
-
-      - name: List Final Artifacts
-        run: ls -al release_artifacts
 
       - name: Upload Binaries to Release
         uses: softprops/action-gh-release@v2
@@ -141,6 +143,10 @@ jobs:
             release_artifacts/${{ needs.build.outputs.binary_name }}_macos-apple-silicon
             release_artifacts/${{ needs.build.outputs.binary_name }}_macos-intel
             release_artifacts/${{ needs.build.outputs.binary_name }}_windows.exe
+            release_artifacts/${{ needs.build.outputs.binary_name }}-v0.1.0-linux.tar.gz
+            release_artifacts/${{ needs.build.outputs.binary_name }}-v0.1.0-macos-apple-silicon.tar.gz
+            release_artifacts/${{ needs.build.outputs.binary_name }}-v0.1.0-macos-intel.tar.gz
+            release_artifacts/${{ needs.build.outputs.binary_name }}-v0.1.0-windows.exe.zip
           tag_name: ${{ env.TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
