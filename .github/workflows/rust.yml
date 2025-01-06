@@ -167,10 +167,10 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            artifacts/*_linux
-            artifacts/*_macos-intel
-            artifacts/*_macos-apple-silicon
-            artifacts/*_windows.exe
+            artifacts/*-linux
+            artifacts/*-macos-intel
+            artifacts/*-macos-apple-silicon
+            artifacts/*-windows.exe
           tag_name: ${{ env.TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
