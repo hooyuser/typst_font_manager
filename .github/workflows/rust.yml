@@ -42,6 +42,9 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
+    outputs:
+      binary_name: ${{ steps.binary_name.outputs.BINARY_NAME }}
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -133,10 +136,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release_artifacts/typfont_linux
-            release_artifacts/typfont_macos-apple-silicon
-            release_artifacts/typfont_macos-intel
-            release_artifacts/typfont_windows.exe
+            release_artifacts/${{ needs.build.outputs.binary_name }}_linux
+            release_artifacts/${{ needs.build.outputs.binary_name }}_macos-apple-silicon
+            release_artifacts/${{ needs.build.outputs.binary_name }}_macos-intel
+            release_artifacts/${{ needs.build.outputs.binary_name }}_windows.exe
           tag_name: ${{ env.TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
