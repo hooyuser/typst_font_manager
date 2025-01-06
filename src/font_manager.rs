@@ -373,6 +373,11 @@ impl<'a> FontManager<'a> {
             .map_err(|e| format!("Failed to download {}: {}", font, e))?;
 
         if response.status().is_success() {
+            // Ensure the parent directory exists
+            if let Some(parent) = dest_path.parent() {
+                fs::create_dir_all(parent)
+                    .map_err(|e| format!("Failed to create directories {:?}: {}", parent, e))?;
+            }
             let mut file = fs::File::create(&dest_path)
                 .map_err(|e| format!("Failed to create file {:?}: {}", dest_path, e))?;
             let content = response
