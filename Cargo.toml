@@ -28,5 +28,8 @@ dotenv = "0.15"
 name = "typfont" # Specify the desired binary name here
 path = "src/main.rs"
 
+[package.metadata.binstall]
+bin = ["typfont"]
+
 
 
