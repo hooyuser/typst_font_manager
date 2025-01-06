@@ -83,10 +83,7 @@ jobs:
           else
             echo "~/.cargo/git directory does not exist. Skipping listing."
           fi
-
-      - name: Cargo Check Dependencies
-        run: cargo check --target ${{ matrix.target }}
-
+          
       - name: Build Release Binary
         run: cargo build --release --target ${{ matrix.target }}
 
@@ -120,14 +117,20 @@ jobs:
             exit 1
           fi
 
-      - name: Archive Binary with Suffix
+      - name: Archive Binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
         run: |
+          echo "Archiving binary for Windows"
+          New-Item -ItemType Directory -Force -Path artifacts
+          Copy-Item target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe artifacts/${{ env.BINARY_NAME }}_windows.exe
+      
+      - name: Archive Binary (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          echo "Archiving binary for Linux/macOS"
           mkdir -p artifacts
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
-          else
-            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
-          fi
+          cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
