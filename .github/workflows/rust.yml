@@ -81,33 +81,47 @@ jobs:
             [[ -f target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} ]] || { echo "Binary not found on Unix-based OS"; exit 1; }
           fi
 
-      - name: Prepare Archive
+      # 📦 Original Artifact Preservation
+      - name: Archive Binary (Original Artifacts)
         shell: bash
         run: |
           mkdir -p artifacts
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            # Preserve existing binary
-            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe artifacts/typfont.exe
+            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
           else
-            # Preserve existing binary
-            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} artifacts/typfont
-            tar -czvf artifacts/typfont-v0.1.0-${{ matrix.artifact_suffix }}.tar.gz -C artifacts typfont
+            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
           fi
 
-      - name: Compress Windows Binary
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          Compress-Archive -Path artifacts/typfont.exe -DestinationPath artifacts/typfont-v0.1.0-windows.exe.zip
-      
-
-      - name: Upload Build Artifact
+      - name: Upload Build Artifact (Original)
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}-${{ matrix.artifact_suffix }}
+          path: artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
+
+      # 📦 New Artifacts for cargo binstall
+      - name: Prepare Archive (cargo binstall)
+        shell: bash
+        run: |
+          mkdir -p artifacts_binstall
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe artifacts_binstall/typfont.exe
+          else
+            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} artifacts_binstall/typfont
+            tar -czvf artifacts_binstall/typfont-v0.1.0-${{ matrix.artifact_suffix }}.tar.gz -C artifacts_binstall typfont
+          fi
+
+      - name: Compress Windows Binary (cargo binstall)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path artifacts_binstall/typfont.exe -DestinationPath artifacts_binstall/typfont-v0.1.0-windows.exe.zip
+
+      - name: Upload Build Artifact (cargo binstall)
+        uses: actions/upload-artifact@v4
+        with:
+          name: typfont-v0.1.0-${{ matrix.artifact_suffix }}
           path: |
-            artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
-            artifacts/${{ env.BINARY_NAME }}-v0.1.0-${{ matrix.artifact_suffix }}.*
+            artifacts_binstall/typfont-v0.1.0-${{ matrix.artifact_suffix }}.*
 
   release:
     name: Create GitHub Release
@@ -131,12 +145,17 @@ jobs:
         with:
           path: artifacts
 
+      - name: Debug Artifact Paths
+        run: |
+          echo "Files in artifacts directory:"
+          find artifacts -type f
+
       - name: Flatten Artifacts
         run: |
           mkdir -p release_artifacts
           find artifacts -type f -exec cp {} release_artifacts/ \;
 
-      - name: Upload Binaries to Release
+      - name: Upload Binaries to Release (Original)
         uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -144,10 +163,10 @@ jobs:
             release_artifacts/${{ needs.build.outputs.binary_name }}_macos-apple-silicon
             release_artifacts/${{ needs.build.outputs.binary_name }}_macos-intel
             release_artifacts/${{ needs.build.outputs.binary_name }}_windows.exe
-            release_artifacts/${{ needs.build.outputs.binary_name }}-v0.1.0-linux.tar.gz
-            release_artifacts/${{ needs.build.outputs.binary_name }}-v0.1.0-macos-apple-silicon.tar.gz
-            release_artifacts/${{ needs.build.outputs.binary_name }}-v0.1.0-macos-intel.tar.gz
-            release_artifacts/${{ needs.build.outputs.binary_name }}-v0.1.0-windows.exe.zip
+            release_artifacts/typfont-v0.1.0-linux.tar.gz
+            release_artifacts/typfont-v0.1.0-macos-apple-silicon.tar.gz
+            release_artifacts/typfont-v0.1.0-macos-intel.tar.gz
+            release_artifacts/typfont-v0.1.0-windows.exe.zip
           tag_name: ${{ env.TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
