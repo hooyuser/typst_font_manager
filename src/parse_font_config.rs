@@ -99,7 +99,8 @@ fn preprocess_font_config(toml_str: &str) -> Result<String> {
     let mut toml_value: Value = toml_str.parse::<Value>()?;
 
     // Process the TOML data
-    if let Some(fonts) = toml_value.get("fonts") {  // Extract the "fonts" section in the original TOML structure
+    if let Some(fonts) = toml_value.get("fonts") {
+        // Extract the "fonts" section in the original TOML structure
         if let Some(fonts_array) = fonts.as_array() {
             let mut expanded_fonts = Vec::new();
 
