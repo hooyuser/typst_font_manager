@@ -5,13 +5,17 @@ mod process_font;
 mod utils;
 
 use clap::Parser;
+use colored::Colorize;
 use std::collections::BTreeMap;
+use std::fs;
 use std::path::{Path, PathBuf};
 use typst::text::FontVariant;
 use walkdir::WalkDir;
 
 use crate::command::{Commands, FontCommand};
-use crate::font_manager::{get_github_font_library_info, LibraryDirs};
+use crate::font_manager::{
+    get_github_font_library_info, strip_library_root_path, LibraryDirs, TypstFontLibrary,
+};
 use crate::parse_font_config::TypstFont;
 
 // pub fn fonts(path_str: &str) -> StrResult<()> {
@@ -90,7 +94,7 @@ fn create_font_path_map_from_dirs(library_dirs: &LibraryDirs) -> BTreeMap<TypstF
 fn font_path_map_update(font_map: &mut BTreeMap<TypstFont, PathBuf>, path: &Path) {
     if path.is_file() {
         // Print the file name
-        if let Some(file_name) = path.file_name() {
+        if let Some(_file_name) = path.file_name() {
             //println!("Processing [{}]", &file_name.to_string_lossy());
             let fonts = process_font::Fonts::searcher().search_file(&path);
 
@@ -152,8 +156,10 @@ fn process_command(args: &FontCommand, action: &str) {
 // }
 
 fn main() {
-    let cli = Cli::parse();
+    #[cfg(debug_assertions)]
+    println!("{}", "Dev Version".bold().red());
 
+    let cli = Cli::parse();
     match &cli.command {
         Commands::Check(args) => process_command(args, "Checking"),
         Commands::Update(args) => process_command(args, "Updating"),
@@ -176,9 +182,48 @@ fn main() {
             }
             println!("\n- Font Info:");
 
-            for (font, path) in font_lib_map {
+            for (font, path) in &font_lib_map {
                 println!("{font} - {path:?}");
             }
+
+            if let Some(output_dir_arg) = &args.output {
+                match library_dirs {
+                    LibraryDirs::GitHub(_) => {}
+                    LibraryDirs::Local(library_dirs) => {
+                        // if length of library_dirs is greater than 1, print an error message
+                        if library_dirs.len() > 1 {
+                            println!("Error: If output directory is provided, there should be only one library directory.");
+                            return;
+                        }
+
+                        // if output_dir is provided, write the font library info to the output directory
+                        // otherwise, write to the library_dirs[0]
+                        let output_dir = match &output_dir_arg {
+                            Some(dir) => dir.clone(),
+                            None => library_dirs[0].clone(),
+                        };
+
+
+                        let mut font_lib_map = font_lib_map.clone();
+                        // For the output toml file, strip the library root path
+                        strip_library_root_path(&mut font_lib_map, &output_dir);
+
+                        // Sample TypstFontLibrary
+                        let library = TypstFontLibrary {
+                            fonts: font_lib_map,
+                        };
+                        // Serialize to TOML and write to the target directory
+                        let toml =
+                            toml::to_string_pretty(&library).expect("Failed to serialize to TOML");
+
+                        // Define the file path in target/test_outputs
+                        let file_path = output_dir.join("font_library.toml");
+                        fs::write(&file_path, toml.as_bytes()).expect("Failed to write to file");
+                    }
+                }
+            }
+
+
         }
     }
 }

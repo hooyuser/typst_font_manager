@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueHint};
 use std::path::PathBuf;
 
 #[derive(Subcommand, Debug)]
@@ -36,6 +36,10 @@ pub(crate) struct CheckLibCommand {
     /// Whether source font libraries are GitHub repositories
     #[arg(short, long, default_value = "false")]
     pub(crate) github: bool,
+
+    /// Output path for the results (optional, can be specified without a value)
+    #[arg(short, long, value_name = "OUTPUT", num_args = 0..=1, value_hint = ValueHint::FilePath)]
+    pub(crate) output: Option<Option<PathBuf>>,
 }
 
 impl FontCommand {
