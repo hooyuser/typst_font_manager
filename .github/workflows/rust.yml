@@ -67,6 +67,7 @@ jobs:
         run: |
           BINARY_NAME=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[0].targets[] | select(.kind[] == "bin") | .name')
           echo "BINARY_NAME=${BINARY_NAME}" >> $GITHUB_ENV
+          echo "BINARY_NAME=${BINARY_NAME}" >> $GITHUB_OUTPUT
 
       - name: Verify Binary Existence
         shell: bash
@@ -132,10 +133,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release_artifacts/${{ env.BINARY_NAME }}_linux
-            release_artifacts/${{ env.BINARY_NAME }}_macos-apple-silicon
-            release_artifacts/${{ env.BINARY_NAME }}_macos-intel
-            release_artifacts/${{ env.BINARY_NAME }}_windows.exe
+            release_artifacts/${{ needs.build.outputs.binary_name }}_linux
+            release_artifacts/${{ needs.build.outputs.binary_name }}_macos-apple-silicon
+            release_artifacts/${{ needs.build.outputs.binary_name }}_macos-intel
+            release_artifacts/${{ needs.build.outputs.binary_name }}_windows.exe
           tag_name: ${{ env.TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
