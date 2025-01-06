@@ -11,6 +11,12 @@ on:
     paths-ignore:
       - 'README.md'
       - 'LICENSE'
+  workflow_dispatch:
+    inputs:
+      retry_windows:
+        description: 'Retry Windows Build Only'
+        required: false
+        default: 'false'
 
 env:
   CARGO_TERM_COLOR: always
@@ -22,7 +28,7 @@ concurrency:
 jobs:
   build:
     name: Build and Release
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    if: inputs.retry_windows != 'true' && !contains(github.event.head_commit.message, '[skip ci]')
 
     strategy:
       matrix:
@@ -36,9 +42,6 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact_suffix: macos-apple-silicon
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            artifact_suffix: windows.exe
 
     runs-on: ${{ matrix.os }}
 
@@ -69,16 +72,12 @@ jobs:
       - name: Verify Binary Existence
         run: |
           echo "Checking if binary exists:"
-          ls target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}* || exit 1
+          ls target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}
 
-      - name: Archive Binary with Suffix
+      - name: Archive Binary
         run: |
           mkdir -p artifacts
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
-          else
-            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
-          fi
+          cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
@@ -86,15 +85,68 @@ jobs:
           name: ${{ env.BINARY_NAME }}-${{ matrix.artifact_suffix }}
           path: artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
 
+  build-windows:
+    name: Build and Release (Windows)
+    if: inputs.retry_windows == 'true' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          target: x86_64-pc-windows-msvc
+
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: rust-windows-${{ hashFiles('**/Cargo.lock') }}
+          cache-on-failure: true
+
+      - name: Build Release Binary
+        run: cargo build --release --target x86_64-pc-windows-msvc
+
+      - name: Extract Binary Name from Cargo.toml
+        shell: pwsh
+        run: |
+          $BINARY_NAME = (cargo metadata --format-version=1 --no-deps | jq -r '.packages[0].targets[] | select(.kind[] == "bin") | .name')
+          echo "BINARY_NAME=$BINARY_NAME" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Verify Binary Existence
+        run: |
+          echo "Checking if binary exists:"
+          dir target\x86_64-pc-windows-msvc\release\${{ env.BINARY_NAME }}.exe
+
+      - name: Archive Binary
+        run: |
+          mkdir artifacts
+          Copy-Item target\x86_64-pc-windows-msvc\release\${{ env.BINARY_NAME }}.exe artifacts\${{ env.BINARY_NAME }}_windows.exe
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}-windows.exe
+          path: artifacts\${{ env.BINARY_NAME }}_windows.exe
+
   release:
     name: Create GitHub Release
     if: github.ref == 'refs/heads/main'
-    needs: build
+    needs: [build, build-windows]
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List Artifacts
+        run: ls -R artifacts
 
       - name: Create Git Tag
         run: |
@@ -102,14 +154,6 @@ jobs:
           echo "TAG=${TAG}" >> $GITHUB_ENV
           git tag ${TAG}
           git push origin ${TAG}
-
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: List Artifacts
-        run: ls -R artifacts
 
       - name: Upload Binaries to Release
         uses: softprops/action-gh-release@v1
