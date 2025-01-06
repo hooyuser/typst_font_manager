@@ -23,7 +23,21 @@ jobs:
   build:
     name: Build and Release
     if: "!contains(github.event.head_commit.message, '[skip ci]')"
-    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_suffix: linux
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_suffix: macos
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_suffix: windows.exe
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout Repository
@@ -31,6 +45,8 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ matrix.target }}
 
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v2
@@ -39,7 +55,7 @@ jobs:
           cache-on-failure: true
 
       - name: Build Release Binary
-        run: cargo build --release
+        run: cargo build --release --target ${{ matrix.target }}
 
       - name: Extract Binary Name from Cargo.toml
         id: binary_name
@@ -50,22 +66,51 @@ jobs:
       - name: Verify Binary Existence
         run: |
           echo "Binary Name: $BINARY_NAME"
-          ls target/release/$BINARY_NAME
+          ls target/${{ matrix.target }}/release/$BINARY_NAME${{ matrix.artifact_suffix }}
+
+      - name: Archive Binary
+        run: |
+          mkdir -p artifacts
+          cp target/${{ matrix.target }}/release/$BINARY_NAME${{ matrix.artifact_suffix }} artifacts/${BINARY_NAME}_${{ matrix.artifact_suffix }}
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}-${{ matrix.artifact_suffix }}
+          path: artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
+
+  release:
+    name: Create GitHub Release
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Create Git Tag
-        if: github.ref == 'refs/heads/main'
         run: |
           TAG="v$(date +%Y%m%d%H%M%S)"
           echo "TAG=${TAG}" >> $GITHUB_ENV
           git tag ${TAG}
           git push origin ${TAG}
 
-      - name: Upload Binary to Release
-        if: github.ref == 'refs/heads/main'
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List Artifacts
+        run: ls -R artifacts
+
+      - name: Upload Binaries to Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            target/release/${{ env.BINARY_NAME }}
+            artifacts/${{ env.BINARY_NAME }}_linux
+            artifacts/${{ env.BINARY_NAME }}_macos
+            artifacts/${{ env.BINARY_NAME }}_windows.exe
           tag_name: ${{ env.TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
