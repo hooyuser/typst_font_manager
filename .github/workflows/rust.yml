@@ -81,24 +81,25 @@ jobs:
             [[ -f target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} ]] || { echo "Binary not found on Unix-based OS"; exit 1; }
           fi
 
-      - name: Prepare Artifacts
+      - name: Prepare Archive
         shell: bash
         run: |
           mkdir -p artifacts
-          
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             # Preserve existing binary
-            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
-            # Add new zipped binary with renamed typfont.exe
             cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe artifacts/typfont.exe
-            zip -j artifacts/${{ env.BINARY_NAME }}-v0.1.0-${{ matrix.artifact_suffix }}.zip artifacts/typfont.exe
           else
             # Preserve existing binary
-            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
-            # Add new tar.gz binary with renamed typfont
             cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} artifacts/typfont
-            tar -czvf artifacts/${{ env.BINARY_NAME }}-v0.1.0-${{ matrix.artifact_suffix }}.tar.gz -C artifacts typfont
+            tar -czvf artifacts/typfont-v0.1.0-${{ matrix.artifact_suffix }}.tar.gz -C artifacts typfont
           fi
+
+      - name: Compress Windows Binary
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path artifacts/typfont.exe -DestinationPath artifacts/typfont-v0.1.0-windows.exe.zip
+      
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
