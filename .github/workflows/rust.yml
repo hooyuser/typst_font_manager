@@ -32,7 +32,10 @@ jobs:
             artifact_suffix: linux
           - os: macos-latest
             target: x86_64-apple-darwin
-            artifact_suffix: macos
+            artifact_suffix: macos-intel
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_suffix: macos-apple-silicon
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_suffix: windows.exe
@@ -109,7 +112,8 @@ jobs:
         with:
           files: |
             artifacts/${{ env.BINARY_NAME }}_linux
-            artifacts/${{ env.BINARY_NAME }}_macos
+            artifacts/${{ env.BINARY_NAME }}_macos-intel
+            artifacts/${{ env.BINARY_NAME }}_macos-apple-silicon
             artifacts/${{ env.BINARY_NAME }}_windows.exe
           tag_name: ${{ env.TAG }}
         env:
