@@ -154,11 +154,11 @@ If you want to avoid tracking numerous font files in your Typst project's GitHub
    ```sh
    ./typfont
    ```  
-
+- This should produce a file `font_library.toml` at the root path of your font library.
 ---
 
 ### **2 Create and Push Font Library Repository**  
-- Make your **local font library** a Git repository.  
+- Make your local font library a Git repository.  
 - Push your local font library to a remote GitHub repository.  
 - Assume the following:  
    - **GitHub Username:** `gooduser`  
@@ -167,7 +167,7 @@ If you want to avoid tracking numerous font files in your Typst project's GitHub
 ---
 
 ### **3 Set Up GitHub Actions Workflow**  
-- In your **GitHub Actions** workflow, download the **latest release** of this CLI tool.  
+- In your GitHub Actions workflow, download the latest release of this CLI tool.  
 - Run the following command to download fonts from your remote font library into your GitHub Actions worker:  
    ```sh
    ./typfont update -l "gooduser/font_lib" -g
