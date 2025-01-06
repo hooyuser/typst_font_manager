@@ -3,7 +3,7 @@
 ![Lines of code](https://tokei.rs/b1/github/hooyuser/typst_font_manager) ![](https://img.shields.io/github/repo-size/hooyuser/typst_font_manager?style=plastic
 )
 
-### 📚 **Font Configuration for Typst Projects**
+## 📚 **Font Configuration for Typst Projects**
 
 To use this font manager CLI tool with your Typst project, place a font configuration file named `font_config.toml` in the same directory as your Typst file `*.typ`.
 
@@ -30,7 +30,7 @@ family_name = "STIXTwoText"
 style = "Italic"
 weight = 400
 ```
-### 📖 **Font Configuration Rules**
+## 📖 **Font Configuration Rules**
 
 1. **Font Directory:**  
    - Use `font_dir = "fonts"` to specify the subdirectory where font files are stored.  
@@ -49,7 +49,7 @@ weight = 400
    - If `style` is omitted, the default is `"Normal"`. No fuzzy matching is applied.  
    - If `weight` is omitted, the default is `400`.
 
-### 🛠️ **CLI Command Guide**
+## 🛠️ **CLI Command Guide**
 
 The following steps outline how to explicitly set up font dependencies for your local Typst project by strictly specifying the font variants you want to use.
 
