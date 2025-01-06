@@ -11,7 +11,7 @@ keywords = ["cli", "tool", "typst", "font"]
 categories = ["command-line-utilities"]
 
 [dependencies]
-typst = { git = "https://github.com/typst/typst", branch = "main" }
+typst = "0.12" # typst = { git = "https://github.com/typst/typst", branch = "main" }
 fontdb = "0.23"
 walkdir = "2.5"
 serde = { version = "1.0", features = ["derive"] }
