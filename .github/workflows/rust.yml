@@ -143,34 +143,35 @@ jobs:
     if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
-
+  
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
+  
       - name: Create Git Tag
         run: |
           TAG="v$(date +%Y%m%d%H%M%S)"
           echo "TAG=${TAG}" >> $GITHUB_ENV
           git tag ${TAG}
           git push origin ${TAG}
-
+  
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-
+  
       - name: List Artifacts
         run: ls -R artifacts
-
+  
       - name: Upload Binaries to Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            artifacts/${{ env.BINARY_NAME }}_linux
-            artifacts/${{ env.BINARY_NAME }}_macos-intel
-            artifacts/${{ env.BINARY_NAME }}_macos-apple-silicon
-            artifacts/${{ env.BINARY_NAME }}_windows.exe
+            artifacts/*_linux
+            artifacts/*_macos-intel
+            artifacts/*_macos-apple-silicon
+            artifacts/*_windows.exe
           tag_name: ${{ env.TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
