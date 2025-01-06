@@ -23,14 +23,28 @@ jobs:
 
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v2
+        with:
+          key: rust-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            rust-${{ runner.os }}
 
       - name: Build Release Binary
         run: cargo build --release
 
+      - name: Create Git Tag
+        if: github.ref == 'refs/heads/main'
+        run: |
+          TAG="v$(date +%Y%m%d%H%M%S)"
+          echo "TAG=${TAG}" >> $GITHUB_ENV
+          git tag ${TAG}
+          git push origin ${TAG}
+
       - name: Upload Binary to Release
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v1
         with:
           files: |
             target/release/<your-binary-name>
+          tag_name: ${{ env.TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
