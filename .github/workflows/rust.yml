@@ -3,16 +3,44 @@ name: Rust
 on:
   push:
     branches: [ "main" ]
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
   pull_request:
     branches: [ "main" ]
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
 
 env:
   CARGO_TERM_COLOR: always
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build and Release
-    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_suffix: linux
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_suffix: macos-intel
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_suffix: macos-apple-silicon
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_suffix: windows.exe
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout Repository
@@ -20,31 +48,130 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ matrix.target }}
 
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          key: rust-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            rust-${{ runner.os }}
+          key: rust-${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+          cache-on-failure: true
 
+      - name: Validate Cargo Cache (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          echo "Cargo Cache Contents:"
+          if (Test-Path "$env:CARGO_HOME\registry") {
+            Get-ChildItem -Path "$env:CARGO_HOME\registry" -Recurse
+          } else {
+            echo "$env:CARGO_HOME\registry not found."
+          }
+          if (Test-Path "$env:CARGO_HOME\git") {
+            Get-ChildItem -Path "$env:CARGO_HOME\git" -Recurse
+          } else {
+            echo "$env:CARGO_HOME\git directory does not exist. Skipping listing."
+          }
+      
+      - name: Validate Cargo Cache (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          echo "Cargo Cache Contents:"
+          ls -al ~/.cargo/registry || echo "~/.cargo/registry not found."
+          if [ -d ~/.cargo/git ]; then
+            ls -al ~/.cargo/git
+          else
+            echo "~/.cargo/git directory does not exist. Skipping listing."
+          fi
+          
       - name: Build Release Binary
-        run: cargo build --release
+        run: cargo build --release --target ${{ matrix.target }}
 
+      - name: Extract Binary Name from Cargo.toml
+        id: binary_name
+        shell: bash
+        run: |
+          BINARY_NAME=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[0].targets[] | select(.kind[] == "bin") | .name')
+          echo "BINARY_NAME=${BINARY_NAME}" >> $GITHUB_ENV
+
+      - name: Verify Binary Existence (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          echo "Windows platform detected"
+          if (Test-Path "target\${{ matrix.target }}\release\${{ env.BINARY_NAME }}.exe") {
+            Write-Host "Binary exists: target\${{ matrix.target }}\release\${{ env.BINARY_NAME }}.exe"
+          } else {
+            Write-Error "Binary not found!"
+            exit 1
+          }
+      
+      - name: Verify Binary Existence (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          echo "Linux/macOS platform detected"
+          if [ -f target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} ]; then
+            echo "Binary exists: target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}"
+          else
+            echo "Binary not found!"
+            exit 1
+          fi
+
+      - name: Archive Binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          echo "Archiving binary for Windows"
+          New-Item -ItemType Directory -Force -Path artifacts
+          Copy-Item target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe artifacts/${{ env.BINARY_NAME }}_windows.exe
+      
+      - name: Archive Binary (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          echo "Archiving binary for Linux/macOS"
+          mkdir -p artifacts
+          cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}-${{ matrix.artifact_suffix }}
+          path: artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
+
+  release:
+    name: Create GitHub Release
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+  
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+  
       - name: Create Git Tag
-        if: github.ref == 'refs/heads/main'
         run: |
           TAG="v$(date +%Y%m%d%H%M%S)"
           echo "TAG=${TAG}" >> $GITHUB_ENV
           git tag ${TAG}
           git push origin ${TAG}
-
-      - name: Upload Binary to Release
-        if: github.ref == 'refs/heads/main'
+  
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+  
+      - name: List Artifacts
+        run: ls -R artifacts
+  
+      - name: Upload Binaries to Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            target/release/<your-binary-name>
+            artifacts/*_linux
+            artifacts/*_macos-intel
+            artifacts/*_macos-apple-silicon
+            artifacts/*_windows.exe
           tag_name: ${{ env.TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
