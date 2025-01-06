@@ -57,7 +57,24 @@ jobs:
           key: rust-${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
           cache-on-failure: true
 
-      - name: Validate Cargo Cache
+      - name: Validate Cargo Cache (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          echo "Cargo Cache Contents:"
+          if (Test-Path "$env:CARGO_HOME\registry") {
+            Get-ChildItem -Path "$env:CARGO_HOME\registry" -Recurse
+          } else {
+            echo "$env:CARGO_HOME\registry not found."
+          }
+          if (Test-Path "$env:CARGO_HOME\git") {
+            Get-ChildItem -Path "$env:CARGO_HOME\git" -Recurse
+          } else {
+            echo "$env:CARGO_HOME\git directory does not exist. Skipping listing."
+          }
+      
+      - name: Validate Cargo Cache (Linux/macOS)
+        if: runner.os != 'Windows'
         run: |
           echo "Cargo Cache Contents:"
           ls -al ~/.cargo/registry || echo "~/.cargo/registry not found."
