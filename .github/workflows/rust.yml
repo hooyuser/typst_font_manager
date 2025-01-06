@@ -60,8 +60,6 @@ jobs:
 
       - name: Build Release Binary
         run: cargo build --release --locked --target ${{ matrix.target }}
-        env:
-          RUSTFLAGS: "-D warnings"
 
       - name: Extract Binary Name
         id: binary_name
