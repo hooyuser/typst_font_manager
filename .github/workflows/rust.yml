@@ -68,13 +68,17 @@ jobs:
 
       - name: Verify Binary Existence
         run: |
-          echo "Binary Name: $BINARY_NAME"
-          ls target/${{ matrix.target }}/release/$BINARY_NAME${{ matrix.artifact_suffix }}
+          echo "Checking if binary exists:"
+          ls target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}* || exit 1
 
-      - name: Archive Binary
+      - name: Archive Binary with Suffix
         run: |
           mkdir -p artifacts
-          cp target/${{ matrix.target }}/release/$BINARY_NAME${{ matrix.artifact_suffix }} artifacts/${BINARY_NAME}_${{ matrix.artifact_suffix }}
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
+          else
+            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
+          fi
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
