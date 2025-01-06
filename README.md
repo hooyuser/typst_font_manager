@@ -11,7 +11,7 @@
 
 ## 📚 **Font Configuration for Typst Projects**
 
-To use this font manager CLI tool with your Typst project, place a font configuration file named `font_config.toml` in the same directory as your Typst file `*.typ`.
+To use this font manager CLI tool with your [Typst](https://github.com/typst/typst) project, place a font configuration file named `font_config.toml` in the same directory as your Typst file `*.typ`.
 
 Below is an example `font_config.toml` file that explicitly specifies **5 fonts** from **3 font families**:  
 - **Noto Sans** (3 variants)  
@@ -173,8 +173,7 @@ If you want to avoid tracking numerous font files in your Typst project's GitHub
    ./typfont update -l "gooduser/font_lib" -g
    ```  
 
-- For reference, you can check one of my CI workflow examples:  
-   [Example CI Workflow](https://github.com/hooyuser/functional_analysis/blob/main/.github/workflows/generate_release_pdf.yml)
+- For reference, you can check one of my CI workflow examples: [Example CI Workflow](https://github.com/hooyuser/functional_analysis/blob/main/.github/workflows/generate_release_pdf.yml)
 
 
 
