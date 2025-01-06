@@ -30,7 +30,7 @@ family_name = "STIXTwoText"
 style = "Italic"
 weight = 400
 ```
-### 🛠️ **Font Configuration Rules**
+### 📖 **Font Configuration Rules**
 
 1. **Font Directory:**  
    - Use `font_dir = "fonts"` to specify the subdirectory where font files are stored.  
