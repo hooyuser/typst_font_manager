@@ -43,17 +43,14 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      ### ✅ Checkout Repository
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      ### ✅ Install Rust
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           target: ${{ matrix.target }}
 
-      ### ✅ Cache Dependencies
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v2
         with:
@@ -61,14 +58,11 @@ jobs:
           shared-key: rust-${{ matrix.target }}
           cache-on-failure: true
 
-      ### ✅ Build Release Binary
       - name: Build Release Binary
-        run: |
-          cargo build --release --locked --target ${{ matrix.target }}
+        run: cargo build --release --locked --target ${{ matrix.target }}
         env:
           RUSTFLAGS: "-D warnings"
 
-      ### ✅ Extract Binary Name
       - name: Extract Binary Name
         id: binary_name
         shell: bash
@@ -76,7 +70,6 @@ jobs:
           BINARY_NAME=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[0].targets[] | select(.kind[] == "bin") | .name')
           echo "BINARY_NAME=${BINARY_NAME}" >> $GITHUB_ENV
 
-      ### ✅ Verify Binary Existence
       - name: Verify Binary Existence
         shell: bash
         run: |
@@ -86,7 +79,6 @@ jobs:
             [[ -f target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} ]] || { echo "Binary not found on Unix-based OS"; exit 1; }
           fi
 
-      ### ✅ Archive Binary
       - name: Archive Binary
         shell: bash
         run: |
@@ -97,14 +89,11 @@ jobs:
             cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
           fi
 
-      ### ✅ Upload Build Artifact
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}-${{ matrix.artifact_suffix }}
           path: artifacts/${{ env.BINARY_NAME }}_${{ matrix.artifact_suffix }}
-
----
 
   release:
     name: Create GitHub Release
@@ -113,11 +102,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      ### ✅ Checkout Repository
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      ### ✅ Create Git Tag
       - name: Create Git Tag
         run: |
           TAG="v$(date +%Y%m%d%H%M%S)"
@@ -125,29 +112,24 @@ jobs:
           git tag ${TAG}
           git push origin ${TAG}
 
-      ### ✅ Download Artifacts
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      ### ✅ Debug Artifact Paths
       - name: Debug Artifact Paths
         run: |
           echo "Files in artifacts directory:"
           find artifacts -type f
 
-      ### ✅ Flatten Artifacts
       - name: Flatten Artifacts
         run: |
           mkdir -p release_artifacts
           find artifacts -type f -exec cp {} release_artifacts/ \;
 
-      ### ✅ List Final Artifacts
       - name: List Final Artifacts
         run: ls -al release_artifacts
 
-      ### ✅ Upload Binaries to Release
       - name: Upload Binaries to Release
         uses: softprops/action-gh-release@v2
         with:
