@@ -3,6 +3,10 @@
 ![Lines of code](https://tokei.rs/b1/github/hooyuser/typst_font_manager) ![](https://img.shields.io/github/repo-size/hooyuser/typst_font_manager?style=plastic
 )
 
+- [Font Configuration for Typst Projects](#font-configuration-for-typst-projects)
+- [CLI Command Guide](#cli-command-guide)
+- [GitHub CI Integration](#gitHub-ci-integration)
+
 ## 📚 **Font Configuration for Typst Projects**
 
 To use this font manager CLI tool with your Typst project, place a font configuration file named `font_config.toml` in the same directory as your Typst file `*.typ`.
@@ -30,7 +34,8 @@ family_name = "STIXTwoText"
 style = "Italic"
 weight = 400
 ```
-## 📖 **Font Configuration Rules**
+
+### **Font Configuration Rules**
 
 1. **Font Directory:**  
    - Use `font_dir = "fonts"` to specify the subdirectory where font files are stored.  
@@ -133,4 +138,40 @@ This prevents Typst from falling back to unintended font variants, ensuring cons
 ---
 
 By following these steps, you'll have precise control over font management in your Typst projects, minimizing font-related issues and ensuring clarity in your setup.
+
+
+## 🚀 **GitHub CI Integration**
+
+If you want to avoid tracking numerous font files in your Typst project's GitHub repository, this CLI tool can help streamline the process.
+
+### **1 Generate Font Library Information**  
+- Use the following command to generate font library information:  
+   ```sh
+   ./typfont
+   ```  
+
+---
+
+### **2 Create and Push Font Library Repository**  
+- Make your **local font library** a Git repository.  
+- Push your local font library to a remote GitHub repository.  
+- Assume the following:  
+   - **GitHub Username:** `gooduser`  
+   - **Font Library Repository Name:** `font_lib`
+
+---
+
+### **3 Set Up GitHub Actions Workflow**  
+- In your **GitHub Actions** workflow, download the **latest release** of this CLI tool.  
+- Run the following command to download fonts from your remote font library into your GitHub Actions worker:  
+   ```sh
+   ./typfont update -l "gooduser/font_lib" -g
+   ```  
+
+- For reference, you can check one of my CI workflow examples:  
+   [Example CI Workflow](https://github.com/hooyuser/functional_analysis/blob/main/.github/workflows/generate_release_pdf.yml)
+
+
+
+
 
