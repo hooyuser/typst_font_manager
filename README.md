@@ -56,7 +56,7 @@ This method requires Rust and Cargo to be installed on your system.
 
 <a name="font-configuration-for-typst-projects"/>
 
-## 📚 **Font Configuration for Typst Projects**
+## 📄 **Font Configuration for Typst Projects**
 
 To use this font manager CLI tool with your [Typst](https://github.com/typst/typst) project, place a font configuration file named `font_config.toml` in the same directory as your Typst file `*.typ`.
 
