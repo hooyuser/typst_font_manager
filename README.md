@@ -142,7 +142,7 @@ The following steps outline how to explicitly set up font dependencies for your 
 - Remove any existing font files from your Typst project (consider backing them up first).  
 - Run the following command:  
    ```sh
-   ./typfont check -l "/Users/goodguy/font_lib"
+   typfont check -l "/Users/goodguy/font_lib"
    ```  
 - This command will display:  
    - Fonts **required** by your project.  
@@ -156,7 +156,7 @@ The following steps outline how to explicitly set up font dependencies for your 
 
 - Run the following command to copy the required fonts from the library to your project’s configured font directory:  
    ```sh
-   ./typfont update -l "/Users/goodguy/font_lib"
+   typfont update -l "/Users/goodguy/font_lib"
    ```  
 - This ensures only the required fonts are copied to your project.
 
@@ -166,7 +166,7 @@ The following steps outline how to explicitly set up font dependencies for your 
 
 - Run the check command again to ensure nothing is missing:  
    ```sh
-   ./typfont check -l "/Users/goodguy/font_lib"
+   typfont check -l "/Users/goodguy/font_lib"
    ```  
 - The output should confirm that **Missing fonts (total 0)**.
 
@@ -199,7 +199,7 @@ If you want to avoid tracking numerous font files in your Typst project's GitHub
 ### **1 Generate Font Library Information**  
 - Use the following command to generate font library information:  
    ```sh
-   ./typfont check-lib -l "/Users/goodguy/font_lib" -o
+   typfont check-lib -l "/Users/goodguy/font_lib" -o
    ```  
 - This should produce a file `font_library.toml` at the root path of your font library.
 ---
@@ -217,7 +217,7 @@ If you want to avoid tracking numerous font files in your Typst project's GitHub
 - In your GitHub Actions workflow, download the latest release of this CLI tool.  
 - Run the following command to download fonts from your remote font library into your GitHub Actions worker:  
    ```sh
-   ./typfont update -l "gooduser/font_lib" -g
+   typfont update -l "gooduser/font_lib" -g
    ```  
 
 - For reference, you can check one of my CI workflow examples: [Example CI Workflow](https://github.com/hooyuser/functional_analysis/blob/main/.github/workflows/generate_release_pdf.yml)
