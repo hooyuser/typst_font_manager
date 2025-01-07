@@ -145,9 +145,10 @@ The following steps outline how to explicitly set up font dependencies for your 
    typfont check -l "/Users/goodguy/font_lib"
    ```  
 - This command will display:  
-   - Fonts **required** by your project.  
-   - Fonts **available** in your library.  
-   - Fonts **missing** from your library.  
+   - Fonts **required** by your project.
+   - Fonts **missing** from your project, but **available** in your library.
+   - Fonts **missing** from your project, but **unavailable** in your library.
+   
 - If all required fonts are present in the library, you’re good to proceed.
 
 ---
