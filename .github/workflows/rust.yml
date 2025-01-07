@@ -128,15 +128,23 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Create Git Tag
+      - name: Determine Tag Name
+        id: determine_tag
         run: |
           VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[0].version')
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
-          TAG="v${VERSION}+${TIMESTAMP}"
+
+          # Check if the commit message contains [fixed-tag]
+          if git log -1 --pretty=%B | grep '\[fixed-tag\]'; then
+            TAG="v${VERSION}"
+          else
+            TAG="v${VERSION}+${TIMESTAMP}"
+          fi
+
           echo "TAG=${TAG}" >> $GITHUB_ENV
           git tag ${TAG}
           git push origin ${TAG}
-      
+        shell: bash
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4
