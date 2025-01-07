@@ -3,7 +3,7 @@
 ![Lines of code](https://tokei.rs/b1/github/hooyuser/typst_font_manager) ![](https://img.shields.io/github/repo-size/hooyuser/typst_font_manager?style=plastic
 )
 
-![image](https://github.com/user-attachments/assets/b3bbf123-07f3-48e6-a1de-e0e557c82fba)
+![typfont](https://github.com/user-attachments/assets/a92f5b12-6f97-4cf0-97f8-9ae5b9fb2d31)
 
 A CLI tool to manage fonts for [Typst](https://github.com/typst/typst) projects.
 
