@@ -1,3 +1,8 @@
+# CI Workflow
+# Commit Message Keywords:
+# - [skip-ci]: Skip the CI workflow for this commit.
+# - [fixed-tag]: Trigger an automated release workflow.
+
 name: Rust
 
 on:
@@ -22,7 +27,7 @@ concurrency:
 jobs:
   build:
     name: Build and Release
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    if: "!contains(github.event.head_commit.message, '[skip-ci]')"
 
     strategy:
       matrix:
