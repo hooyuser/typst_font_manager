@@ -18,7 +18,7 @@ A CLI tool to manage fonts for [Typst](https://github.com/typst/typst) projects.
 
 ## 📦 Installation Methods
 
-You can install `typst_font_manager` using one of the following three methods:
+You can install this Typst Font Manager CLI named **typfont** using one of the following three methods:
 
 #### **1. Using `cargo-binstall` (Recommended)**  
 `cargo-binstall` allows you to quickly download and install pre-compiled binaries.
@@ -114,7 +114,7 @@ The following steps outline how to explicitly set up font dependencies for your 
 #### **1 Identify Required Font Variants**  
 
 - Start by determining the **exact font variants** your project needs.  
-- A handy tool for this is **Tinymist**. Open the command palette (`Ctrl+Shift+P`) and search for `summary`.  
+- A handy tool for this is [**Tinymist**](https://github.com/Myriad-Dreamin/tinymist). Open the command palette (`Ctrl+Shift+P`) and search for `summary`.  
 - Click on **`Typst: Show current document summary`**, and in the newly opened page, scroll down to view all fonts currently used in your Typst project.  
 - Click the **"book" icon** in the top-right corner to access detailed information about each font, including:  
    - **Family Name**  
