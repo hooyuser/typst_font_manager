@@ -137,11 +137,15 @@ jobs:
           # Check if the commit message contains [fixed-tag]
           if git log -1 --pretty=%B | grep '\[fixed-tag\]'; then
             TAG="v${VERSION}"
+            PRERELEASE=false
           else
             TAG="v${VERSION}+${TIMESTAMP}"
+            PRERELEASE=true
           fi
 
           echo "TAG=${TAG}" >> $GITHUB_ENV
+          echo "PRERELEASE=${PRERELEASE}" >> $GITHUB_ENV
+          
           git tag ${TAG}
           git push origin ${TAG}
         shell: bash
@@ -169,5 +173,6 @@ jobs:
             release_artifacts/typfont-v0.1.0-aarch64-apple-darwin.tar.gz
             release_artifacts/typfont-v0.1.0-x86_64-pc-windows-msvc.zip
           tag_name: ${{ env.TAG }}
+          prerelease: ${{ env.PRERELEASE }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
