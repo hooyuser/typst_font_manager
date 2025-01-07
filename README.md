@@ -3,18 +3,22 @@
 ![Lines of code](https://tokei.rs/b1/github/hooyuser/typst_font_manager) ![](https://img.shields.io/github/repo-size/hooyuser/typst_font_manager?style=plastic
 )
 
+![image](https://github.com/user-attachments/assets/b3bbf123-07f3-48e6-a1de-e0e557c82fba)
+
+A CLI tool to manage fonts for [Typst](https://github.com/typst/typst) projects.
+
 - [Installation Methods](#installation-methods)
 - [Font Configuration for Typst Projects](#font-configuration-for-typst-projects)
 - [CLI Command Guide](#cli-command-guide)
 - [GitHub CI Integration](#gitHub-ci-integration)
+
+---
 
 <a name="installation-methods"/>
 
 ## 📦 Installation Methods
 
 You can install `typst_font_manager` using one of the following three methods:
-
----
 
 #### **1. Using `cargo-binstall` (Recommended)**  
 `cargo-binstall` allows you to quickly download and install pre-compiled binaries.
