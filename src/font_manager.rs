@@ -504,24 +504,6 @@ pub fn strip_library_root_path(
     }
 }
 
-// pub fn download_font_library(github_repo: &str) -> Result<(), Box<dyn std::error::Error>> {
-//     // Construct the URL to the raw file on GitHub
-//     let url = format!("https://raw.githubusercontent.com/{}/main/font_library.toml", github_repo);
-//
-//     // Send a GET request to fetch the file
-//     let response = get(&url)?;
-//     if !response.status().is_success() {
-//         return Err(format!("Failed to download file: HTTP {}", response.status()).into());
-//     }
-//
-//     // Create a local file named `font_library.toml`
-//     let mut dest = File::create("font_library.toml")?;
-//     let mut content = response.bytes()?;
-//     copy(&mut content.as_ref(), &mut dest)?;
-//
-//     println!("font_library.toml has been successfully downloaded!");
-//     Ok(())
-// }
 
 pub fn download_font_library_info<P>(github_repo: P) -> Result<String, Box<dyn std::error::Error>>
 where
