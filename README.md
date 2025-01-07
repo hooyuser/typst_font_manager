@@ -3,9 +3,52 @@
 ![Lines of code](https://tokei.rs/b1/github/hooyuser/typst_font_manager) ![](https://img.shields.io/github/repo-size/hooyuser/typst_font_manager?style=plastic
 )
 
+- [Installation Methods](#installation-methods)
 - [Font Configuration for Typst Projects](#font-configuration-for-typst-projects)
 - [CLI Command Guide](#cli-command-guide)
 - [GitHub CI Integration](#gitHub-ci-integration)
+
+<a name="installation-methods"/>
+
+## 📦 Installation Methods
+
+You can install `typst_font_manager` using one of the following three methods:
+
+---
+
+#### **1. Using `cargo-binstall` (Recommended)**  
+`cargo-binstall` allows you to quickly download and install pre-compiled binaries.
+
+1. Install [`cargo-binstall`](https://github.com/cargo-bins/cargo-binstall) if you haven’t already.  
+2. Run the following command:  
+
+   ```sh
+   cargo binstall typst_font_manager
+   ```
+
+This method ensures you get the latest pre-built binary with minimal setup.
+
+---
+
+#### **2. Manual Download**  
+1. Visit the [Releases Page](https://github.com/hooyuser/typst_font_manager/releases).  
+2. Download the appropriate binary for your platform.  
+3. Rename the binary to:  
+   - `typfont` (Linux/macOS)  
+   - `typfont.exe` (Windows)  
+4. Move the binary to a directory included in your system's `PATH`.
+
+---
+
+#### **3. Build from Source with `cargo`**  
+If you prefer building from source, run:
+
+```sh
+cargo install typst_font_manager
+```
+
+This method requires Rust and Cargo to be installed on your system.
+
 
 <a name="font-configuration-for-typst-projects"/>
 
