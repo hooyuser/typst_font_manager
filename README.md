@@ -36,7 +36,7 @@ This method ensures you get the latest pre-built binary with minimal setup.
 
 #### **2. Manual Download**  
 1. Visit the [Releases Page](https://github.com/hooyuser/typst_font_manager/releases).  
-2. Download the appropriate binary for your platform.  
+2. Download the appropriate binary for your platform. You can choose either a compressed file or an uncompressed binary file.
 3. Rename the binary to:  
    - `typfont` (Linux/macOS)  
    - `typfont.exe` (Windows)
