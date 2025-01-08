@@ -41,7 +41,7 @@ This method ensures you get the latest pre-built binary with minimal setup.
    - `typfont` (Linux/macOS)  
    - `typfont.exe` (Windows)
      
-   if you download the unzipped binaries. 
+   if you downloaded an uncompressed executable file. 
 4. Move the binary to a directory included in your system's `PATH`.
 
 ---
