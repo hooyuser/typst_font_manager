@@ -39,7 +39,9 @@ This method ensures you get the latest pre-built binary with minimal setup.
 2. Download the appropriate binary for your platform.  
 3. Rename the binary to:  
    - `typfont` (Linux/macOS)  
-   - `typfont.exe` (Windows)  
+   - `typfont.exe` (Windows)
+     
+   if you download the unzipped binaries. 
 4. Move the binary to a directory included in your system's `PATH`.
 
 ---
@@ -142,6 +144,7 @@ The following steps outline how to explicitly set up font dependencies for your 
 - Remove any existing font files from your Typst project (consider backing them up first).  
 - Run the following command:  
    ```sh
+   cd path_to_your_typst_project
    typfont check -l "/Users/goodguy/font_lib"
    ```  
 - This command will display:  
