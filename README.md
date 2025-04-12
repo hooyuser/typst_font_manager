@@ -1,7 +1,8 @@
 # Typst Font Manager CLI
 
-![Lines of code](https://tokei.rs/b1/github/hooyuser/typst_font_manager) ![](https://img.shields.io/github/repo-size/hooyuser/typst_font_manager?style=plastic
-)
+[![Lines of code](https://tokei.rs/b1/github/hooyuser/typst_font_manager?style=flat)](https://github.com/hooyuser/typst_font_manager)
+![repo size](https://img.shields.io/github/repo-size/hooyuser/typst_font_manager?style=flat
+) [![dependency status](https://deps.rs/repo/github/hooyuser/typst_font_manager/status.svg)](https://deps.rs/repo/github/hooyuser/typst_font_manager)
 
 ![typfont](https://github.com/user-attachments/assets/a92f5b12-6f97-4cf0-97f8-9ae5b9fb2d31)
 
