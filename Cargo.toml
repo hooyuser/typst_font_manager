@@ -1,6 +1,6 @@
 [package]
 name = "typst_font_manager"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "A CLI tool to manage fonts for Typst projects"
 license = "GPL-3.0"
@@ -10,14 +10,14 @@ keywords = ["cli", "tool", "typst", "font"]
 categories = ["command-line-utilities"]
 
 [dependencies]
-typst = "0.12" # typst = { git = "https://github.com/typst/typst", branch = "main" }
+typst = "0.13" # typst = { git = "https://github.com/typst/typst", branch = "main" }
 fontdb = "0.23"
 walkdir = "2.5"
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.8"
 clap = { version = "4.5", features = ["derive"] }
 anyhow = "1.0"
-colored = "2.2"
+colored = "3.0"
 reqwest = { version = "0.12", features = ["blocking"] }
 
 [dev-dependencies]
