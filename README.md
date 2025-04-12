@@ -5,6 +5,7 @@
 [![dependency status](https://deps.rs/repo/github/hooyuser/typst_font_manager/status.svg)](https://deps.rs/repo/github/hooyuser/typst_font_manager)
 ![](https://img.shields.io/crates/d/typst_font_manager?label=downloads%20%28crates.io%29)
 ![](https://img.shields.io/github/downloads/hooyuser/typst_font_manager/total?label=downloads%20%28GH%29)
+[![Crates.io](https://img.shields.io/crates/v/typst_font_manager.svg)](https://crates.io/crates/typst_font_manager)
 
 
 ![typfont](https://github.com/user-attachments/assets/a92f5b12-6f97-4cf0-97f8-9ae5b9fb2d31)
