@@ -77,6 +77,14 @@ jobs:
           echo "BINARY_NAME=${BINARY_NAME}" >> $GITHUB_ENV
           echo "BINARY_NAME=${BINARY_NAME}" >> $GITHUB_OUTPUT
 
+      - name: Extract Package Version
+        id: package_version
+        shell: bash
+        run: |
+          VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[0].version')
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+
       - name: Verify Binary Existence
         shell: bash
         run: |
@@ -173,10 +181,10 @@ jobs:
             release_artifacts/${{ needs.build.outputs.binary_name }}_macos-apple-silicon
             release_artifacts/${{ needs.build.outputs.binary_name }}_macos-intel
             release_artifacts/${{ needs.build.outputs.binary_name }}_windows.exe
-            release_artifacts/typfont-v0.1.0-x86_64-unknown-linux-gnu.tar.gz
-            release_artifacts/typfont-v0.1.0-x86_64-apple-darwin.tar.gz
-            release_artifacts/typfont-v0.1.0-aarch64-apple-darwin.tar.gz
-            release_artifacts/typfont-v0.1.0-x86_64-pc-windows-msvc.zip
+            release_artifacts/typfont-v${{ needs.build.outputs.version }}-x86_64-unknown-linux-gnu.tar.gz
+            release_artifacts/typfont-v${{ needs.build.outputs.version }}-x86_64-apple-darwin.tar.gz
+            release_artifacts/typfont-v${{ needs.build.outputs.version }}-aarch64-apple-darwin.tar.gz
+            release_artifacts/typfont-v${{ needs.build.outputs.version }}-x86_64-pc-windows-msvc.zip
           tag_name: ${{ env.TAG }}
           prerelease: ${{ env.PRERELEASE }}
         env:
