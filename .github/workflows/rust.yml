@@ -118,7 +118,7 @@ jobs:
           mkdir -p artifacts_binstall
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe artifacts_binstall/typfont.exe
-            powershell -Command "Compress-Archive -Path artifacts_binstall/typfont.exe -DestinationPath artifacts_binstall/typfont-v0.1.0-${{ matrix.target }}.zip"
+            powershell -Command "Compress-Archive -Path artifacts_binstall/typfont.exe -DestinationPath artifacts_binstall/typfont-v${{ env.VERSION }}-${{ matrix.target }}.zip"
           else
             cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} artifacts_binstall/typfont
             tar -czvf artifacts_binstall/typfont-v${{ env.VERSION }}-${{ matrix.target }}.tar.gz -C artifacts_binstall typfont
