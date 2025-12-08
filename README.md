@@ -1,6 +1,6 @@
 # Typst Font Manager CLI
 
-[![Lines of code](https://tokei.rs/b1/github/hooyuser/typst_font_manager?style=flat)](https://github.com/hooyuser/typst_font_manager)
+![Lines of Code](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/hooyuser/github-badges/main/badges/hooyuser-typst_font_manager.json) 
 ![repo size](https://img.shields.io/github/repo-size/hooyuser/typst_font_manager?style=flat) 
 [![dependency status](https://deps.rs/repo/github/hooyuser/typst_font_manager/status.svg)](https://deps.rs/repo/github/hooyuser/typst_font_manager)
 ![](https://img.shields.io/crates/d/typst_font_manager?label=downloads%20%28crates.io%29)
