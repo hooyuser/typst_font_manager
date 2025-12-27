@@ -49,6 +49,7 @@ jobs:
 
     outputs:
       binary_name: ${{ steps.binary_name.outputs.BINARY_NAME }}
+      version: ${{ steps.package_version.outputs.VERSION }}
 
     steps:
       - name: Checkout Repository
