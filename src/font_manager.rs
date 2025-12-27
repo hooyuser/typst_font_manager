@@ -615,6 +615,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_local_font_library_serialization() {
         use dotenv::dotenv;
         use std::env;

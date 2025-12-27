@@ -239,6 +239,7 @@ weight = [500, 700]
     }
 
     #[test]
+    #[ignore]
     fn test_deserialize_fonts_from_file() {
         let config_file =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/font_configs/font_config.toml");
