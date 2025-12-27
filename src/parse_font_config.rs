@@ -97,7 +97,7 @@ pub fn serialize_fonts_to_toml(font_config: FontConfig) -> Result<String> {
 // expanding the "weight" field if it is an array
 fn preprocess_font_config(toml_str: &str) -> Result<String> {
     // Parse the TOML string into a Value
-    let mut toml_value: Value = toml_str.parse::<Value>()?;
+    let mut toml_value: Value = toml::from_str(toml_str)?;
 
     // Process the TOML data
     if let Some(fonts) = toml_value.get("fonts") {
