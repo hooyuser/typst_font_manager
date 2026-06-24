@@ -13,9 +13,9 @@ pub(crate) enum Commands {
 
 #[derive(Parser, Debug)]
 pub(crate) struct FontCommand {
-    /// Path to the configuration file
-    #[arg(default_value = "./font_config.toml")]
-    pub(crate) config: PathBuf,
+    /// Project root directory or path to font_config.toml
+    #[arg(default_value = ".", value_name = "PROJECT_OR_CONFIG")]
+    pub(crate) project_or_config: PathBuf,
 
     /// Source font library directory paths
     /// For GitHub repositories, use the format "owner/repo"

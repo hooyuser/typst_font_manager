@@ -13,7 +13,7 @@ use typst::text::{AxisValue, FontAxis, FontStretch, FontVariant, FontWeight, Sta
 use walkdir::WalkDir;
 
 use crate::command::{Commands, FontCommand};
-use crate::font_manager::{LibraryDirs, get_github_font_library_info};
+use crate::font_manager::{LibraryDirs, get_github_font_library_entries};
 use crate::parse_font_config::TypstFont;
 
 #[derive(Clone, Debug)]
@@ -80,28 +80,23 @@ pub(crate) fn create_font_entries<P: AsRef<Path>>(font_dir: P) -> Vec<Discovered
     fonts
 }
 
-fn create_font_path_map_from_dirs(library_dirs: &LibraryDirs) -> BTreeMap<TypstFont, PathBuf> {
+#[allow(dead_code)]
+pub(crate) fn create_font_path_map_from_dirs(
+    library_dirs: &LibraryDirs,
+) -> BTreeMap<TypstFont, PathBuf> {
     font_entries_to_path_map(create_font_entries_from_dirs(library_dirs))
 }
 
-fn create_font_entries_from_dirs(library_dirs: &LibraryDirs) -> Vec<DiscoveredFont> {
+pub(crate) fn create_font_entries_from_dirs(library_dirs: &LibraryDirs) -> Vec<DiscoveredFont> {
     let mut fonts = Vec::new();
 
     match library_dirs {
         LibraryDirs::GitHub(github_repos) => {
             for github_repo in github_repos {
                 // github_repo is a string like "owner/repo"
-                let github_font_map = get_github_font_library_info(&github_repo)
+                let github_font_entries = get_github_font_library_entries(&github_repo)
                     .expect("Error Occurs when getting fonts from GitHub");
-                fonts.extend(
-                    github_font_map
-                        .into_iter()
-                        .map(|(font, path)| DiscoveredFont {
-                            font,
-                            path,
-                            axes: vec![],
-                        }),
-                );
+                fonts.extend(github_font_entries);
             }
         }
         LibraryDirs::Local(font_dirs) => {
@@ -420,6 +415,10 @@ fn print_font_variant(entry: &DiscoveredFont, last: bool) {
         for axis in &axes {
             println!("{pad} {}", format_axis(axis));
         }
+    }
+
+    if !last {
+        println!("  │");
     }
 }
 
