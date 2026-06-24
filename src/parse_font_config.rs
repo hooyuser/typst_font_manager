@@ -30,7 +30,7 @@ impl fmt::Display for TypstFont {
     }
 }
 
-mod typst_font_serde {
+pub(crate) mod typst_font_serde {
     use serde::{Deserialize, Deserializer, Serializer};
     use typst::text::FontStyle;
 

@@ -1,16 +1,17 @@
 use crate::command::FontCommand;
 use crate::parse_font_config::{
-    deserialize_fonts_from_file, deserialize_fonts_from_toml, FontConfig, TypstFont,
+    FontConfig, TypstFont, deserialize_fonts_from_file, deserialize_fonts_from_toml,
 };
 use crate::{create_font_path_map, create_font_path_map_from_dirs, utils};
 use colored::Colorize;
-use reqwest::blocking::{get, Client};
+use reqwest::blocking::{Client, get};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::slice::Iter;
+use typst::text::{FontStretch, FontStyle, FontWeight};
 
 const EMBEDDED_FONTS: &str = r#"
 [[fonts]]
@@ -463,6 +464,39 @@ mod font_map_serde {
         path: PathBuf,
     }
 
+    #[derive(Deserialize)]
+    struct FontMapEntryDe {
+        family_name: String,
+        #[serde(default, with = "crate::parse_font_config::typst_font_serde")]
+        style: FontStyle,
+        #[serde(default)]
+        weight: FontValue<FontWeight>,
+        #[serde(default)]
+        stretch: FontValue<FontStretch>,
+        path: PathBuf,
+    }
+
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum FontValue<T> {
+        Fixed(T),
+        Range { default: T },
+    }
+
+    impl<T: Default> Default for FontValue<T> {
+        fn default() -> Self {
+            Self::Fixed(T::default())
+        }
+    }
+
+    impl<T> FontValue<T> {
+        fn into_value(self) -> T {
+            match self {
+                Self::Fixed(value) | Self::Range { default: value } => value,
+            }
+        }
+    }
+
     pub fn serialize<S>(
         map: &BTreeMap<TypstFont, PathBuf>,
         serializer: S,
@@ -485,14 +519,23 @@ mod font_map_serde {
     where
         D: Deserializer<'de>,
     {
-        let entries: Vec<FontMapEntry> = Vec::deserialize(deserializer)?;
+        let entries: Vec<FontMapEntryDe> = Vec::deserialize(deserializer)?;
         Ok(entries
             .into_iter()
-            .map(|entry| (entry.font, entry.path))
+            .map(|entry| {
+                let font = TypstFont {
+                    family_name: entry.family_name,
+                    style: entry.style,
+                    weight: entry.weight.into_value(),
+                    stretch: entry.stretch.into_value(),
+                };
+                (font, entry.path)
+            })
             .collect())
     }
 }
 
+#[allow(dead_code)]
 pub fn strip_library_root_path(
     font_lib_map: &mut BTreeMap<TypstFont, PathBuf>,
     library_root_path: &Path,
@@ -503,7 +546,6 @@ pub fn strip_library_root_path(
         }
     }
 }
-
 
 pub fn download_font_library_info<P>(github_repo: P) -> Result<String, Box<dyn std::error::Error>>
 where
@@ -612,6 +654,44 @@ mod tests {
             toml::from_str(&contents).expect("Failed to deserialize from TOML");
 
         assert_eq!(library.fonts, deserialized.fonts);
+    }
+
+    #[test]
+    fn test_variable_font_library_deserialization_uses_defaults() {
+        let toml = r#"[[fonts]]
+family_name = "Baskervville"
+style = "Normal"
+weight = { min = 400, max = 700, default = 400 }
+stretch = 1000
+path = "Baskervville/Baskervville-VariableFont_wght.ttf"
+
+[[fonts]]
+family_name = "Noto Sans"
+style = "Italic"
+weight = { min = 100, max = 900, default = 400 }
+stretch = { min = 750, max = 1250, default = 1000 }
+optical_size = { min = 14, max = 32, default = 14 }
+axes = [
+  { tag = "CRSV", min = 0, max = 1, default = 0 }
+]
+path = "NotoSans/NotoSans-Italic-VariableFont_wdth,wght.ttf"
+"#;
+
+        let library: TypstFontLibrary = toml::from_str(toml).unwrap();
+
+        assert!(library.fonts.contains_key(&TypstFont {
+            family_name: "Baskervville".to_string(),
+            style: FontStyle::Normal,
+            weight: FontWeight::from_number(400),
+            stretch: FontStretch::NORMAL,
+        }));
+
+        assert!(library.fonts.contains_key(&TypstFont {
+            family_name: "Noto Sans".to_string(),
+            style: FontStyle::Italic,
+            weight: FontWeight::from_number(400),
+            stretch: FontStretch::NORMAL,
+        }));
     }
 
     #[test]

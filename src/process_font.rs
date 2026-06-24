@@ -15,7 +15,7 @@ use fontdb::Database;
 // use std::sync::OnceLock;
 use std::path::Path;
 
-use typst::text::{FontBook, FontInfo};
+use typst::text::FontInfo;
 //use typst::text::{Font};
 
 /// Holds details about the location of a font and lazily the font itself.
@@ -64,8 +64,8 @@ use typst::text::{FontBook, FontInfo};
 /// The result of a font search, created by calling [`FontSearcher::search`].
 #[derive(Debug)]
 pub struct Fonts {
-    /// Metadata about all discovered fonts.
-    pub book: FontBook,
+    /// Metadata in discovery order.
+    pub infos: Vec<FontInfo>,
     ///// Slots that the fonts are loaded into.
     //pub fonts: Vec<FontSlot>,
 }
@@ -86,7 +86,7 @@ impl Fonts {
 #[derive(Debug)]
 pub struct FontSearcher {
     db: Database,
-    book: FontBook,
+    infos: Vec<FontInfo>,
     //fonts: Vec<FontSlot>,
 }
 
@@ -96,7 +96,7 @@ impl FontSearcher {
     pub fn new() -> Self {
         Self {
             db: Database::new(),
-            book: FontBook::new(),
+            infos: vec![],
             //fonts: vec![],
         }
     }
@@ -181,7 +181,7 @@ impl FontSearcher {
                 .expect("database must contain this font");
 
             if let Some(info) = info {
-                self.book.push(info);
+                self.infos.push(info);
                 // self.fonts.push(FontSlot {
                 //     path: Some(path.clone()),
                 //     index: face.index,
@@ -191,7 +191,7 @@ impl FontSearcher {
         }
 
         Fonts {
-            book: std::mem::take(&mut self.book),
+            infos: std::mem::take(&mut self.infos),
             //fonts: std::mem::take(&mut self.fonts),
         }
     }
