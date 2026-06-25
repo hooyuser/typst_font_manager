@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand, ValueHint};
+use clap::{Args, Subcommand, ValueHint};
 use std::path::PathBuf;
 
 #[derive(Subcommand, Debug)]
@@ -6,12 +6,12 @@ pub(crate) enum Commands {
     /// Check font configuration
     Check(FontCommand),
     /// Update font configuration
-    Update(FontCommand),
+    Update(UpdateCommand),
     /// Show font library information
     CheckLib(CheckLibCommand),
 }
 
-#[derive(Parser, Debug)]
+#[derive(Args, Debug)]
 pub(crate) struct FontCommand {
     /// Project root directory or path to font_config.toml
     #[arg(default_value = ".", value_name = "PROJECT_OR_CONFIG")]
@@ -27,7 +27,17 @@ pub(crate) struct FontCommand {
     pub(crate) github: bool,
 }
 
-#[derive(Parser, Debug)]
+#[derive(Args, Debug)]
+pub(crate) struct UpdateCommand {
+    #[command(flatten)]
+    pub(crate) font: FontCommand,
+
+    /// Print the planned font updates without copying or downloading files
+    #[arg(long, default_value = "false")]
+    pub(crate) dry_run: bool,
+}
+
+#[derive(Args, Debug)]
 pub(crate) struct CheckLibCommand {
     /// Path to the font library directory
     #[arg(short, long, num_args = 1.., value_name = "DIR")]
@@ -51,5 +61,45 @@ impl FontCommand {
             );
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Commands;
+    use clap::Parser;
+    use std::path::PathBuf;
+
+    #[derive(Parser, Debug)]
+    struct TestCli {
+        #[command(subcommand)]
+        command: Commands,
+    }
+
+    #[test]
+    fn update_accepts_dry_run() {
+        let cli = TestCli::parse_from([
+            "typfont",
+            "update",
+            "--dry-run",
+            "-l",
+            "/Users/goodguy/font_lib",
+        ]);
+
+        match cli.command {
+            Commands::Update(args) => {
+                assert!(args.dry_run);
+                assert_eq!(
+                    args.font.library,
+                    Some(vec![PathBuf::from("/Users/goodguy/font_lib")])
+                );
+            }
+            _ => panic!("expected update command"),
+        }
+    }
+
+    #[test]
+    fn check_does_not_accept_dry_run() {
+        assert!(TestCli::try_parse_from(["typfont", "check", "--dry-run"]).is_err());
     }
 }

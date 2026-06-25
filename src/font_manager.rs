@@ -199,6 +199,49 @@ fn entry_has_variant_axis(entry: &DiscoveredFont) -> bool {
         || standard.wdth.is_some()
 }
 
+fn format_discovered_font(entry: &DiscoveredFont) -> String {
+    let standard = StandardAxes::parse(&entry.axes);
+    let weight = standard
+        .wght
+        .map(format_weight_range)
+        .unwrap_or_else(|| entry.font.weight.to_number().to_string());
+    let stretch = standard
+        .wdth
+        .map(format_stretch_range)
+        .unwrap_or_else(|| stretch_to_number(entry.font.stretch).to_string());
+
+    format!(
+        "{:<30}    (style: {:?}, weight: {}, stretch: {})",
+        entry.font.family_name, entry.font.style, weight, stretch
+    )
+}
+
+fn format_weight_range(axis: &FontAxis) -> String {
+    format_range(
+        FontWeight::from_wght(axis.min).to_number(),
+        FontWeight::from_wght(axis.max).to_number(),
+    )
+}
+
+fn format_stretch_range(axis: &FontAxis) -> String {
+    format_range(
+        stretch_to_number(FontStretch::from_wdth(axis.min)),
+        stretch_to_number(FontStretch::from_wdth(axis.max)),
+    )
+}
+
+fn format_range(min: u16, max: u16) -> String {
+    if min == max {
+        min.to_string()
+    } else {
+        format!("{min}-{max}")
+    }
+}
+
+fn stretch_to_number(stretch: FontStretch) -> u16 {
+    (stretch.to_ratio().get() * 1000.0) as u16
+}
+
 fn select_best_font_entry<'a>(
     font: &TypstFont,
     entries: &'a [DiscoveredFont],
@@ -372,7 +415,7 @@ impl<'a> FontManager<'a> {
             );
             println!(
                 "  {} - Font is required and is embedded in the compiler",
-                "●".bright_green()
+                "◆".bright_green()
             );
             println!(
                 "  {} - Font is not required but exists in the project",
@@ -387,18 +430,24 @@ impl<'a> FontManager<'a> {
     }
 
     fn print_font_sets(&self) {
-        self.print_font_set("Current fonts", &self.font_sets.current, |font| {
-            if self.font_sets.required.contains(font) || self.current_entry_satisfies_required(font)
-            {
-                "●".green()
-            } else {
-                "●".blue()
-            }
-        });
+        self.print_font_set_with(
+            "Current fonts",
+            &self.font_sets.current,
+            |font| {
+                if self.font_sets.required.contains(font)
+                    || self.current_entry_satisfies_required(font)
+                {
+                    "●".green()
+                } else {
+                    "●".blue()
+                }
+            },
+            |font| self.format_current_font(font),
+        );
 
         self.print_font_set("Required fonts", &self.font_sets.required, |font| {
             if self.font_sets.embedded.contains(font) {
-                "●".bright_green()
+                "◆".bright_green()
             } else if font_is_satisfied_by_entries(font, &self.font_sets.current_entries) {
                 "●".green()
             } else if self.select_library_candidate(font).is_some() {
@@ -423,6 +472,19 @@ impl<'a> FontManager<'a> {
     where
         F: Fn(&TypstFont) -> colored::ColoredString,
     {
+        self.print_font_set_with(title, fonts, get_bullet, |font| font.to_string());
+    }
+
+    fn print_font_set_with<F, G>(
+        &self,
+        title: &str,
+        fonts: &BTreeSet<TypstFont>,
+        get_bullet: F,
+        format_font: G,
+    ) where
+        F: Fn(&TypstFont) -> colored::ColoredString,
+        G: Fn(&TypstFont) -> String,
+    {
         println!(
             "\n- {} (total {}){}",
             title.bold(),
@@ -430,8 +492,16 @@ impl<'a> FontManager<'a> {
             if fonts.is_empty() { "" } else { ":" }
         );
         for font in fonts {
-            println!("  {} {}", get_bullet(font), font);
+            println!("  {} {}", get_bullet(font), format_font(font));
         }
+    }
+
+    fn format_current_font(&self, font: &TypstFont) -> String {
+        self.font_sets
+            .current_entries
+            .iter()
+            .find(|entry| entry.font == *font)
+            .map_or_else(|| font.to_string(), format_discovered_font)
     }
 
     fn current_entry_satisfies_required(&self, current: &TypstFont) -> bool {
@@ -507,13 +577,17 @@ impl<'a> FontManager<'a> {
         Ok(())
     }
 
-    pub(crate) fn update_fonts(&self) -> Result<(), String> {
+    pub(crate) fn update_fonts(&self, dry_run: bool) -> Result<(), String> {
         if self.font_sets.missing.is_empty() {
             println!("\nNo missing fonts to update");
             return Ok(());
         }
 
-        println!("\n- {}", "Updating fonts".bold());
+        if dry_run {
+            println!("\n- {}", "Dry run: planned font updates".bold());
+        } else {
+            println!("\n- {}", "Updating fonts".bold());
+        }
 
         let mut copied_sources = BTreeSet::<PathBuf>::new();
 
@@ -533,7 +607,8 @@ impl<'a> FontManager<'a> {
                             .absolute_font_dir
                             .join(&source_path.file_name().unwrap());
                         println!(
-                            "  Copying {source_path:?} to {:?}",
+                            "  {} {source_path:?} to {:?}",
+                            if dry_run { "Would copy" } else { "Copying" },
                             Path::new(
                                 &self
                                     .font_config
@@ -543,11 +618,30 @@ impl<'a> FontManager<'a> {
                             )
                             .join(&source_path.file_name().unwrap())
                         );
+                        if dry_run {
+                            continue;
+                        }
                         // Copy the font file from the library to the project's font directory
                         fs::copy(&source_path, &dest_path)
                             .map_err(|_| format!("Failed to copy font file: {:?}", font))?;
                     }
                     LibraryDirs::GitHub(_) => {
+                        if dry_run {
+                            let github_repo = get_first_two_segments(source_path)
+                                .expect("Invalid GitHub repo path");
+                            let font_relative_path = get_remaining_after_two_segments(source_path)
+                                .expect("Invalid font path");
+                            let url = format!(
+                                "https://raw.githubusercontent.com/{}/main/{}",
+                                github_repo.display(),
+                                font_relative_path.display()
+                            );
+                            let dest_path = self
+                                .absolute_font_dir
+                                .join(source_path.file_name().unwrap());
+                            println!("  Would download {url} to {:?}", dest_path);
+                            continue;
+                        }
                         self.download_font_from_github_path(font, source_path)
                             .expect("Failed to download fonts from GitHub");
                     }
@@ -854,6 +948,7 @@ where
 mod tests {
     use super::*;
     use crate::create_font_path_map_from_dirs;
+    use std::collections::BTreeSet;
     use std::env;
     use typst::text::{AxisValue, FontAxis, FontStretch, FontStyle, FontWeight, StandardAxes};
 
@@ -925,6 +1020,76 @@ mod tests {
             selected.path,
             PathBuf::from("Baskervville-VariableFont_wght.ttf")
         );
+    }
+
+    #[test]
+    fn test_font_status_display_uses_numeric_and_variable_ranges() {
+        let fixed = font("Example Fixed", FontStyle::Normal, 400, FontStretch::NORMAL);
+        assert!(format!("{fixed}").contains("weight: 400"));
+        assert!(!format!("{fixed}").contains("FontWeight"));
+
+        let variable = discovered(
+            font(
+                "Example Variable",
+                FontStyle::Normal,
+                400,
+                FontStretch::NORMAL,
+            ),
+            "ExampleVariable.ttf",
+            vec![axis(StandardAxes::WGHT, 100.0, 900.0, 400.0)],
+        );
+
+        let formatted = format_discovered_font(&variable);
+        assert!(formatted.contains("weight: 100-900"));
+        assert!(!formatted.contains("FontWeight"));
+    }
+
+    #[test]
+    fn test_dry_run_update_does_not_copy_local_font() {
+        let target_dir = env::var("CARGO_TARGET_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| PathBuf::from("target"));
+        let test_dir = target_dir.join("dry_run_update_does_not_copy_local_font");
+        fs::remove_dir_all(&test_dir).ok();
+
+        let library_dir = test_dir.join("library");
+        let project_dir = test_dir.join("project");
+        let source_path = library_dir.join("Example-Regular.ttf");
+        let absolute_font_dir = project_dir.join("fonts");
+        fs::create_dir_all(&library_dir).unwrap();
+        fs::create_dir_all(&project_dir).unwrap();
+        fs::write(&source_path, b"not a real font").unwrap();
+
+        let missing_font = font("Example", FontStyle::Normal, 400, FontStretch::NORMAL);
+        let manager = FontManager {
+            config_file: project_dir.join("font_config.toml"),
+            font_config: FontConfig {
+                font_dir: Some("fonts".to_string()),
+                fonts: vec![missing_font.clone()],
+            },
+            library_dirs: LibraryDirs::Local(vec![library_dir]),
+            absolute_font_dir: absolute_font_dir.clone(),
+            font_sets: FontSets {
+                required: BTreeSet::from([missing_font.clone()]),
+                current: BTreeSet::new(),
+                current_entries: Vec::new(),
+                embedded: BTreeSet::new(),
+                missing: BTreeSet::from([missing_font.clone()]),
+                redundant: BTreeSet::new(),
+                library_entries: vec![DiscoveredFont {
+                    font: missing_font,
+                    path: source_path.clone(),
+                    axes: Vec::new(),
+                }],
+            },
+            action: "Updating",
+        };
+
+        manager.update_fonts(true).unwrap();
+
+        assert!(source_path.exists());
+        assert!(!absolute_font_dir.exists());
+        assert!(!absolute_font_dir.join("Example-Regular.ttf").exists());
     }
 
     #[test]

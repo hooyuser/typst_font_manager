@@ -463,14 +463,14 @@ struct Cli {
     command: Commands,
 }
 
-fn process_command(args: &FontCommand, action: &str) {
+fn process_command(args: &FontCommand, action: &str, dry_run: bool) {
     args.validate().unwrap();
     match font_manager::FontManager::new(args, action) {
         Ok(font_manager) => {
             font_manager.print_status();
 
             if action == "Updating" {
-                if let Err(e) = font_manager.update_fonts() {
+                if let Err(e) = font_manager.update_fonts(dry_run) {
                     println!("Error updating fonts: {e}");
                 }
             }
@@ -490,8 +490,8 @@ fn main() {
 
     let cli = Cli::parse();
     match &cli.command {
-        Commands::Check(args) => process_command(args, "Checking"),
-        Commands::Update(args) => process_command(args, "Updating"),
+        Commands::Check(args) => process_command(args, "Checking", false),
+        Commands::Update(args) => process_command(&args.font, "Updating", args.dry_run),
         Commands::CheckLib(args) => {
             let library_dirs = if args.github {
                 LibraryDirs::GitHub(args.library.clone().unwrap())

@@ -24,8 +24,11 @@ impl fmt::Display for TypstFont {
         let stretch = (self.stretch.to_ratio().get() * 1000.0) as u16;
         write!(
             f,
-            "{:<30}    (style: {:?}, weight: {:?}, stretch: {})",
-            self.family_name, self.style, self.weight, stretch
+            "{:<30}    (style: {:?}, weight: {}, stretch: {})",
+            self.family_name,
+            self.style,
+            self.weight.to_number(),
+            stretch
         )
     }
 }

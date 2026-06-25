@@ -167,6 +167,10 @@ The following steps outline how to explicitly set up font dependencies for your 
    ```sh
    typfont update -l "/Users/goodguy/font_lib"
    ```  
+- To preview the changes without copying any files, use dry run mode:
+   ```sh
+   typfont update --dry-run -l "/Users/goodguy/font_lib"
+   ```
 - This ensures only the required fonts are copied to your project.
 
 ---
